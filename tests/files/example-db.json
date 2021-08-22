@@ -1,0 +1,1 @@
+{"stringField":"string","numberField":1,"nestedSchema":{"stringField":"nested","numberField":2,"arrayOfSchemas":[]},"arrayOfSchemas":[{"stringField":"arr1","numberField":3,"arrayOfSchemas":[]},{"stringField":"arr2","numberField":4,"arrayOfSchemas":[]}]}
