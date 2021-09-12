@@ -25,8 +25,14 @@ export default class FileStorage<
         fs.readFileSync(this.options.persist as string, { encoding: 'utf-8' })
       ) as Schema
     } else {
-      this.currentState = initialStateOrOptions as Schema
       this.options = options || {}
+      if (this.options.persist && fs.existsSync(this.options.persist)) {
+        this.currentState = JSON.parse(
+          fs.readFileSync(this.options.persist as string, { encoding: 'utf-8' })
+        ) as Schema
+      } else {
+        this.currentState = initialStateOrOptions as Schema
+      }
     }
   }
 
