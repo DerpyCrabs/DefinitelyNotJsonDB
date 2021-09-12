@@ -8,8 +8,6 @@
     "/dist/tsc/*"
   ],
   "module": "esnext",
-  "type": "module",
-  "target": "es2017",
   "scripts": {
     "test": "jest",
     "clean": "rm -rf dist build package",
@@ -33,6 +31,7 @@
   "dependencies": {
     "immer": "^9.0.5",
     "ramda": "^0.27.1",
-    "ts-toolbelt": "^9.6.0"
+    "ts-toolbelt": "^9.6.0",
+    "tslib": "^2.3.1"
   }
 }

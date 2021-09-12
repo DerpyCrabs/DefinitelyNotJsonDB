@@ -26,7 +26,7 @@ test('can be initialized with initial data and persist option', () => {
   const storage = new FileStorage(
     { field: 5 },
     {
-      persist: 'tests/files/example-db.json',
+      persist: 'tests/files/example-db2.json',
     }
   )
   const db = new JsonDB(storage)
