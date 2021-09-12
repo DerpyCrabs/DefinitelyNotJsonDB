@@ -21,3 +21,17 @@ test('can be initialized from the file', () => {
   })
   expect(res).toBe('nested')
 })
+
+test('can be initialized with initial data and persist option', () => {
+  const storage = new FileStorage(
+    { field: 5 },
+    {
+      persist: 'tests/files/example-db.json',
+    }
+  )
+  const db = new JsonDB(storage)
+  const res = db.transact({ test: 'field' })((state) => {
+    return state.test
+  })
+  expect(res).toBe(5)
+})

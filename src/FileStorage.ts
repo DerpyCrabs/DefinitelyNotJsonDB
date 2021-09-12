@@ -12,9 +12,9 @@ export default class FileStorage<
 
   constructor(
     initialStateOrOptions: Schema | (FileStorageOptions & { persist: string }),
-    options?: typeof initialStateOrOptions extends Schema
-      ? FileStorageOptions
-      : never
+    options?: typeof initialStateOrOptions extends { persist: string }
+      ? never
+      : FileStorageOptions
   ) {
     super()
     if ((initialStateOrOptions as FileStorageOptions).persist !== undefined) {
