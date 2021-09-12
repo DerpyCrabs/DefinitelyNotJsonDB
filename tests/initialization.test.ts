@@ -1,8 +1,10 @@
 import JsonDB from '../src'
 import ExampleSchema from './files/example-db'
+import FileStorage from '../src/FileStorage'
 
 test('can be initialized with initial data', () => {
-  const db = new JsonDB<{ field: number }>({ field: 5 })
+  const storage = new FileStorage<{ field: number }>({ field: 5 })
+  const db = new JsonDB(storage)
   const res = db.transact({ test: 'field' })((state) => {
     return state.test
   })
@@ -10,9 +12,10 @@ test('can be initialized with initial data', () => {
 })
 
 test('can be initialized from the file', () => {
-  const db = new JsonDB<ExampleSchema>({
+  const storage = new FileStorage<ExampleSchema>({
     persist: 'tests/files/example-db.json',
   })
+  const db = new JsonDB(storage)
   const res = db.transact({ test: 'nestedSchema.stringField' })((state) => {
     return state.test
   })

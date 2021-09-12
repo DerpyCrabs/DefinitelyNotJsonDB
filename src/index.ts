@@ -1,138 +1,46 @@
-import { produce } from 'immer'
-import * as R from 'ramda'
-import fs from 'fs'
-import type { A, O } from 'ts-toolbelt'
+import type { A, O, B } from 'ts-toolbelt'
+import FileStorage from './FileStorage'
 import type { Split } from './Split'
+import { DBStorage } from './Storage'
+import { Paths } from './utils'
 
 export class JsonDB<Schema extends object> {
-  currentState: Schema
-  options: JsonDBOptions
+  storage: DBStorage<Schema>
 
-  constructor(
-    initialStateOrOptions: Schema | (JsonDBOptions & { persist: string }),
-    options?: typeof initialStateOrOptions extends Schema
-      ? JsonDBOptions
-      : never
-  ) {
-    if ((initialStateOrOptions as JsonDBOptions).persist !== undefined) {
-      this.options = initialStateOrOptions as JsonDBOptions & {
-        persist: string
-      }
-      this.currentState = JSON.parse(
-        fs.readFileSync(this.options.persist as string, { encoding: 'utf-8' })
-      ) as Schema
-    } else {
-      this.currentState = initialStateOrOptions as Schema
-      this.options = options || {}
-    }
+  constructor(storage: DBStorage<Schema>) {
+    this.storage = storage
   }
 
-  getSnapshot(f: (state: Schema) => void): void {
-    f(this.currentState)
+  getSnapshot(): Schema {
+    return this.storage.getSnapshot()
   }
 
-  transact<R>(paths: Paths): (action: (state: any) => R) => R {
-    const stateLens = pathsToStateLens(paths)
-    return (action: (state: any) => R): R => {
-      const state = stateLensToActionState(stateLens, this.currentState)
-
-      const [newState, result] = this.handleTransaction(state, action)
-
-      this.currentState = actionStateToState(
-        stateLens,
-        newState,
-        this.currentState
-      )
-
-      if (this.options.persist) {
-        fs.writeFileSync(
-          this.options.persist,
-          JSON.stringify(this.currentState),
-          { encoding: 'utf-8' }
-        )
-      }
-      return result
-    }
-  }
-
-  private handleTransaction<R>(
-    state: any,
-    action: (state: any) => R
-  ): [any, R] {
-    let result = undefined
-
-    const newState = produce(state, (s: any) => {
-      result = action(s)
-    })
-
-    return [newState, result as unknown as R]
+  transact(paths: {
+    [key: string]: never
+  }): <Result>(action: (state: any) => Result) => Result {
+    return this.storage.transact(paths)
   }
 }
-
-function pathsToStateLens(paths: Paths): StateLens {
-  return Object.fromEntries(
-    Object.entries(paths).map(([fieldName, path]) => [
-      fieldName,
-      R.lensPath(splitPath(path)),
-    ])
-  )
-}
-
-function stateLensToActionState<State>(
-  stateLens: StateLens,
-  currentState: State
-): ActionState {
-  return Object.fromEntries(
-    Object.entries(stateLens).map(([fieldName, lens]) => [
-      fieldName,
-      R.view(lens, currentState),
-    ])
-  )
-}
-
-function actionStateToState<State>(
-  stateLens: StateLens,
-  actionState: ActionState,
-  currentState: State
-): State {
-  let intermittentState = currentState
-  Object.entries(stateLens).forEach(([fieldName, lens]) => {
-    intermittentState = R.set(lens, actionState[fieldName])(intermittentState)
-  })
-  return intermittentState
-}
-
-function splitPath(path: string): (number | string)[] {
-  return path
-    .split('.')
-    .map((p) => (/^\d+$/.test(p) ? Number.parseInt(p, 10) : p))
-}
-
-type Paths = { [key: string]: string }
-type StateLens = { [key: string]: R.Lens<any, any> }
-type ActionState = { [key: string]: any }
 
 export interface JsonDB<Schema extends object> {
-  transact<R, K extends Paths>(
-    state: {
-      [key in keyof K]: A.Equals<
-        O.Path<Schema, Split<K[key], '.'>>,
-        undefined
+  transact<K extends Paths>(
+    paths: {
+      [key in keyof K]: B.Or<
+        A.Equals<O.Path<Schema, Split<K[key], '.'>>, never>,
+        A.Equals<O.Path<Schema, Split<K[key], '.'>>, undefined>
       > extends 1
         ? never
         : K[key]
     }
-  ): (
+  ): <Result>(
     f: (
       state: {
         [key in keyof K]: O.Path<Schema, Split<K[key], '.'>>
       }
-    ) => R
-  ) => R
-}
-
-export interface JsonDBOptions {
-  persist?: string
+    ) => Result
+  ) => Result
 }
 
 export default JsonDB
+
+export { FileStorage, DBStorage }
