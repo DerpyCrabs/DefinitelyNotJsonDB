@@ -3,6 +3,8 @@ import FileStorage from './FileStorage'
 import type { Split } from './Split'
 import { DBStorage } from './Storage'
 import { Paths } from './utils'
+import migrateStorage from './migrateStorage'
+import type { Migration } from './migrateStorage'
 
 export class JsonDB<Schema extends object> {
   storage: DBStorage<Schema>
@@ -15,32 +17,26 @@ export class JsonDB<Schema extends object> {
     return this.storage.getSnapshot()
   }
 
-  transact(paths: {
-    [key: string]: never
-  }): <Result>(action: (state: any) => Result) => Result {
+  transact(paths: { [key: string]: never }): <Result>(action: (state: any) => Result) => Result {
     return this.storage.transact(paths)
   }
 }
 
 export interface JsonDB<Schema extends object> {
-  transact<K extends Paths>(
-    paths: {
-      [key in keyof K]: B.Or<
-        A.Equals<O.Path<Schema, Split<K[key], '.'>>, never>,
-        A.Equals<O.Path<Schema, Split<K[key], '.'>>, undefined>
-      > extends 1
-        ? never
-        : K[key]
-    }
-  ): <Result>(
-    f: (
-      state: {
-        [key in keyof K]: O.Path<Schema, Split<K[key], '.'>>
-      }
-    ) => Result
+  transact<K extends Paths>(paths: {
+    [key in keyof K]: B.Or<
+      A.Equals<O.Path<Schema, Split<K[key], '.'>>, never>,
+      A.Equals<O.Path<Schema, Split<K[key], '.'>>, undefined>
+    > extends 1
+      ? never
+      : K[key]
+  }): <Result>(
+    f: (state: {
+      [key in keyof K]: O.Path<Schema, Split<K[key], '.'>>
+    }) => Result
   ) => Result
 }
 
 export default JsonDB
 
-export { FileStorage, DBStorage }
+export { FileStorage, DBStorage, migrateStorage, Migration }

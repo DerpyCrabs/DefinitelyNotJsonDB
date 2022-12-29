@@ -1,37 +1,38 @@
 {
   "name": "definitely-not-jsondb",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "",
-  "main": "./dist/tsc/index.js",
-  "types": "./dist/tsc/index.d.ts",
+  "main": "./dist/definitely-not-jsondb.js",
+  "types": "./dist/index.d.ts",
   "files": [
-    "/dist/tsc/*"
+    "/dist/*"
   ],
+  "type": "module",
   "module": "esnext",
   "scripts": {
-    "test": "jest",
-    "clean": "rm -rf dist build package",
-    "build": "tsc -p tsconfig.json --declaration"
+    "test": "vitest",
+    "build": "vite build",
+    "test-types": "npx tsd"
   },
   "author": "Vyacheslav Goma <derpycrabs@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@types/jest": "^27.0.1",
-    "@types/node": "^16.7.1",
-    "@types/ramda": "^0.27.44",
-    "@typescript-eslint/eslint-plugin": "^4.29.2",
-    "@typescript-eslint/parser": "^4.29.2",
-    "esbuild": "^0.12.22",
-    "eslint": "^7.32.0",
-    "jest": "^27.0.6",
-    "ts-jest": "^27.0.5",
-    "ts-node": "^10.2.1",
-    "typescript": "^4.3.5"
+    "@types/node": "^18.11.9",
+    "@types/ramda": "^0.28.20",
+    "tsd": "^0.25.0",
+    "typescript": "^4.9.3",
+    "vite": "^3.2.4",
+    "vite-plugin-dts": "^1.7.1",
+    "vitest": "^0.25.2"
   },
+  "sideEffects": false,
   "dependencies": {
-    "immer": "^9.0.5",
-    "ramda": "^0.27.1",
+    "immer": "^9.0.16",
+    "ramda": "^0.28.0",
     "ts-toolbelt": "^9.6.0",
-    "tslib": "^2.3.1"
+    "tslib": "^2.4.1"
+  },
+  "tsd": {
+    "directory": "tests"
   }
 }

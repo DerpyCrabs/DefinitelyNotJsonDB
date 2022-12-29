@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "ESNext",
     "moduleResolution": "node",
     "target": "ES2015",
     "esModuleInterop": true,
@@ -17,8 +17,8 @@
     "strict": true,
     "sourceMap": true,
     "outDir": "dist/tsc/",
-    "types": ["node", "jest"]
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "tests/initialization.test.ts"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "include": ["src/**/*.ts", "tests/*.test.ts"],
+  "exclude": ["node_modules"]
 }
