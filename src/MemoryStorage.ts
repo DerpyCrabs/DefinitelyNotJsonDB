@@ -88,10 +88,11 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
 }
 
 function getViewFromPath(state: any, path: (string | number)[]): any {
-  if (path.length === 0) {
-    return state
-  }
-  return getViewFromPath(state[path[0]], path.slice(1))
+  let fieldPointer = state
+  path.forEach(field => {
+    fieldPointer = fieldPointer[field]
+  })
+  return fieldPointer
 }
 
 function actionStateFromPaths(state: any, paths: Paths): any {
