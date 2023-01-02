@@ -1,5 +1,4 @@
 import { DBStorage, Paths } from './Storage'
-import * as R from 'ramda'
 import produce from 'immer'
 
 export default class MemoryStorage<Schema extends object> extends DBStorage<Schema> {
@@ -65,13 +64,12 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
         return newState
       }
     } else {
-      const stateLens = pathsToStateLens(paths)
       return action => {
-        const state = stateLensToActionState(stateLens, this.currentState)
+        const state = actionStateFromPaths(this.currentState, paths)
 
         const [newState, result] = this.handleTransaction(state, action)
 
-        this.currentState = actionStateToState(stateLens, newState, this.currentState)
+        setStateFromActionState(paths, newState, this.currentState)
 
         return result
       }
@@ -89,27 +87,29 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
   }
 }
 
-function pathsToStateLens(paths: Paths): StateLens {
-  return Object.fromEntries(Object.entries(paths).map(([fieldName, path]) => [fieldName, R.lensPath(splitPath(path))]))
+function getViewFromPath(state: any, path: (string | number)[]): any {
+  if (path.length === 0) {
+    return state
+  }
+  return getViewFromPath(state[path[0]], path.slice(1))
 }
 
-function stateLensToActionState<State>(stateLens: StateLens, currentState: State): ActionState {
+function actionStateFromPaths(state: any, paths: Paths): any {
   return Object.fromEntries(
-    Object.entries(stateLens).map(([fieldName, lens]) => [fieldName, R.view(lens, currentState)])
+    Object.entries(paths).map(([fieldName, path]) => [fieldName, getViewFromPath(state, splitPath(path))])
   )
 }
 
-function actionStateToState<State>(stateLens: StateLens, actionState: ActionState, currentState: State): State {
-  let intermittentState = currentState
-  Object.entries(stateLens).forEach(([fieldName, lens]) => {
-    intermittentState = R.set(lens, actionState[fieldName])(intermittentState)
+function setStateFromActionState(paths: Paths, actionState: { [key: string]: any }, currentState: any) {
+  Object.entries(paths).forEach(([fieldName, path]) => {
+    let fieldPointer = currentState
+    splitPath(path).forEach(field => {
+      fieldPointer = fieldPointer[field]
+    })
+    fieldPointer = actionState[fieldName]
   })
-  return intermittentState
 }
 
 function splitPath(path: string): (number | string)[] {
   return path.split('.').map(p => (/^\d+$/.test(p) ? Number.parseInt(p, 10) : p))
 }
-
-type StateLens = { [key: string]: R.Lens<any, any> }
-type ActionState = { [key: string]: any }
