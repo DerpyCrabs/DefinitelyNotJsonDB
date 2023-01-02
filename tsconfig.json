@@ -19,6 +19,6 @@
     "outDir": "dist/tsc/",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "tests/*.test.ts"],
+  "include": ["src/**/*.ts", "tests/*.test.ts", "tests/*.test-d.ts"],
   "exclude": ["node_modules"]
 }

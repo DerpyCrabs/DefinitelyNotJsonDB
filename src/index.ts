@@ -1,10 +1,7 @@
 import type { A, O, B } from 'ts-toolbelt'
 import FileStorage from './FileStorage'
 import type { Split } from './Split'
-import { DBStorage } from './Storage'
-import { Paths } from './utils'
-import migrateStorage from './migrateStorage'
-import type { Migration } from './migrateStorage'
+import { DBStorage, Paths } from './Storage'
 
 export class JsonDB<Schema extends object> {
   storage: DBStorage<Schema>
@@ -39,4 +36,4 @@ export interface JsonDB<Schema extends object> {
 
 export default JsonDB
 
-export { FileStorage, DBStorage, migrateStorage, Migration }
+export { FileStorage, DBStorage }
