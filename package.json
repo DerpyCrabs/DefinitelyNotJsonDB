@@ -12,7 +12,8 @@
   "scripts": {
     "test": "vitest",
     "build": "vite build",
-    "test-types": "vitest typecheck --run"
+    "test-types": "vitest typecheck --run",
+    "bench": "vitest bench"
   },
   "author": "Vyacheslav Goma <derpycrabs@gmail.com>",
   "license": "MIT",
