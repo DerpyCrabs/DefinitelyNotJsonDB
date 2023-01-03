@@ -1,6 +1,5 @@
-import type { A, O, B } from 'ts-toolbelt'
+import { A, O, B, S } from 'ts-toolbelt'
 import FileStorage from './FileStorage'
-import type { Split } from './Split'
 import { DBStorage, Paths } from './Storage'
 
 export type JsonDBOptions<Schema> = {
@@ -50,27 +49,27 @@ export class JsonDB<Schema extends object> {
 export interface JsonDB<Schema extends object> {
   transact<K extends Paths>(paths: {
     [key in keyof K]: B.Or<
-      A.Equals<O.Path<Schema, Split<K[key], '.'>>, never>,
-      A.Equals<O.Path<Schema, Split<K[key], '.'>>, undefined>
+      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
+      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
     > extends 1
       ? never
       : K[key]
   }): <Result>(
     f: (state: {
-      [key in keyof K]: O.Path<Schema, Split<K[key], '.'>>
+      [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
     }) => Result
   ) => Result
 
   transactAsync<K extends Paths>(paths: {
     [key in keyof K]: B.Or<
-      A.Equals<O.Path<Schema, Split<K[key], '.'>>, never>,
-      A.Equals<O.Path<Schema, Split<K[key], '.'>>, undefined>
+      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
+      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
     > extends 1
       ? never
       : K[key]
   }): <Result>(
     f: (state: {
-      [key in keyof K]: O.Path<Schema, Split<K[key], '.'>>
+      [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
     }) => Promise<Result>
   ) => Promise<Result>
 }
