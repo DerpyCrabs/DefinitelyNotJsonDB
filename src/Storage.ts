@@ -6,10 +6,14 @@ export abstract class DBStorage<Schema extends object> {
   public abstract getSnapshot(): Schema
 
   public abstract transact<Result>(
-    paths?: Paths,
+    paths: Paths,
     options?: JsonDBOptions<Schema>
   ): (action: (state: any) => Result) => Result
   public abstract transact(): (action: (state: Schema) => Schema) => void
+  public abstract transactAsync<Result>(
+    paths: Paths,
+    options?: JsonDBOptions<Schema>
+  ): (action: (state: any) => Promise<Result>) => Promise<Result>
 
   public abstract migrate<Output extends object>(
     title: string,

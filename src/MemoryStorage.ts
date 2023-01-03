@@ -76,6 +76,7 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
         const [newActionState, result] = this.handleTransaction(actionState, action)
 
         setStateFromActionState(paths, newActionState, state)
+
         if (options?.afterTransact) {
           state = options.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
         }
@@ -85,11 +86,47 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
     }
   }
 
+  public transactAsync<Result>(
+    paths: any,
+    options?: JsonDBOptions<Schema>
+  ): (action: (state: any) => Promise<any>) => Promise<Result> {
+    return async action => {
+      let state = structuredClone(this.currentState)
+      if (options?.beforeTransactAsync) {
+        state = await options.beforeTransactAsync({ paths, stateBefore: state })
+      }
+      const actionState = actionStateFromPaths(state, paths)
+
+      const [newActionState, result] = await this.handleAsyncTransaction(actionState, action)
+
+      setStateFromActionState(paths, newActionState, state)
+
+      if (options?.afterTransactAsync) {
+        state = await options.afterTransactAsync({ paths, stateBefore: this.currentState, stateAfter: state })
+      }
+      this.currentState = state
+      return result
+    }
+  }
+
   protected handleTransaction<Result>(state: any, action: (state: any) => Result): [any, Result] {
     let result = undefined
 
     const newState = produce(state, (s: any) => {
       result = action(s)
+    })
+
+    return [newState, result as unknown as Result]
+  }
+
+  protected async handleAsyncTransaction<Result>(
+    state: any,
+    action: (state: any) => Promise<Result>
+  ): Promise<[any, Result]> {
+    let result = undefined
+
+    const newState = await produce(state, async (s: any) => {
+      result = await action(s)
     })
 
     return [newState, result as unknown as Result]
@@ -113,10 +150,11 @@ function actionStateFromPaths(state: any, paths: Paths): any {
 function setStateFromActionState(paths: Paths, actionState: { [key: string]: any }, currentState: any) {
   Object.entries(paths).forEach(([fieldName, path]) => {
     let fieldPointer = currentState
-    splitPath(path).forEach(field => {
+    const pathFields = splitPath(path)
+    pathFields.slice(0, pathFields.length - 1).forEach(field => {
       fieldPointer = fieldPointer[field]
     })
-    fieldPointer = actionState[fieldName]
+    fieldPointer[pathFields[pathFields.length - 1]] = actionState[fieldName]
   })
 }
 

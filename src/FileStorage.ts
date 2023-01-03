@@ -24,6 +24,17 @@ export default class FileStorage<Schema extends object> extends MemoryStorage<Sc
       return result
     }
   }
+
+  public transactAsync(
+    paths?: any,
+    options?: JsonDBOptions<Schema>
+  ): (action: (state: any) => Promise<any>) => Promise<any> {
+    return async action => {
+      const result = await super.transactAsync(paths, options)(action)
+      fs.writeFileSync(this.options.filePath, JSON.stringify(this.currentState), { encoding: 'utf-8' })
+      return result
+    }
+  }
 }
 
 export interface FileStorageOptions {

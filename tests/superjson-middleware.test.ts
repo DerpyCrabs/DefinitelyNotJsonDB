@@ -1,13 +1,20 @@
 import JsonDB, { FileStorage, JsonDBOptions } from '../src'
 import MemoryStorage from '../src/MemoryStorage'
 import superjson from 'superjson'
-import { rmSync } from 'fs'
+import { existsSync, rmSync } from 'fs'
 
 const superjsonMiddleware: JsonDBOptions<any> = {
   beforeTransact({ stateBefore: { __superjsonMeta, ...stateBefore } }) {
     return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
   },
   afterTransact({ stateAfter }) {
+    const { json, meta } = superjson.serialize(stateAfter)
+    return { ...(json as any), __superjsonMeta: meta } as any
+  },
+  async beforeTransactAsync({ stateBefore: { __superjsonMeta, ...stateBefore } }) {
+    return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
+  },
+  async afterTransactAsync({ stateAfter }) {
     const { json, meta } = superjson.serialize(stateAfter)
     return { ...(json as any), __superjsonMeta: meta } as any
   },
@@ -26,7 +33,7 @@ test('superjson middleware works with memory storage', () => {
   expect(typeof res2).toBe('object')
 })
 
-test('superjson middleware works with file storage', () => {
+test('superjson middleware works with file storage', async () => {
   const storage = new FileStorage(
     { field: 5, field2: new Date() },
     {
@@ -35,13 +42,13 @@ test('superjson middleware works with file storage', () => {
   )
 
   const db = new JsonDB(storage, superjsonMiddleware)
-  const res = db.transact({ test: 'field2' })(state => {
-    return state.test
+  const res = db.transactAsync({ test: 'field2' })(async state => {
+    return new Promise(r => r(state.test))
   })
-  expect(typeof res).toBe('object')
+  expect(typeof (await res)).toBe('object')
   const res2 = db.transact({ test: 'field2' })(state => {
     return state.test
   })
   expect(typeof res2).toBe('object')
-  rmSync('tests/files/example-db3.json')
+  if (existsSync('tests/files/example-db3.json')) rmSync('tests/files/example-db3.json')
 })
