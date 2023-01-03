@@ -3,11 +3,26 @@ import FileStorage from './FileStorage'
 import type { Split } from './Split'
 import { DBStorage, Paths } from './Storage'
 
+export type JsonDBOptions<Schema> = {
+  beforeTransact?: ({ paths, stateBefore }: { paths: Paths; stateBefore: Schema }) => Schema
+  afterTransact?: ({
+    paths,
+    stateBefore,
+    stateAfter,
+  }: {
+    paths: Paths
+    stateBefore: Schema
+    stateAfter: Schema
+  }) => Schema
+}
+
 export class JsonDB<Schema extends object> {
   storage: DBStorage<Schema>
+  options?: JsonDBOptions<Schema>
 
-  constructor(storage: DBStorage<Schema>) {
+  constructor(storage: DBStorage<Schema>, options?: JsonDBOptions<Schema>) {
     this.storage = storage
+    this.options = options
   }
 
   getSnapshot(): Schema {
@@ -15,7 +30,7 @@ export class JsonDB<Schema extends object> {
   }
 
   transact(paths: { [key: string]: never }): <Result>(action: (state: any) => Result) => Result {
-    return this.storage.transact(paths)
+    return this.storage.transact(paths, this.options)
   }
 }
 

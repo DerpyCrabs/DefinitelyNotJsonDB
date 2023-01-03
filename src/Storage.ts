@@ -1,9 +1,14 @@
+import { JsonDBOptions } from '.'
+
 export type Paths = { [key: string]: string }
 
 export abstract class DBStorage<Schema extends object> {
   public abstract getSnapshot(): Schema
 
-  public abstract transact<Result>(paths?: Paths): (action: (state: any) => Result) => Result
+  public abstract transact<Result>(
+    paths?: Paths,
+    options?: JsonDBOptions<Schema>
+  ): (action: (state: any) => Result) => Result
   public abstract transact(): (action: (state: Schema) => Schema) => void
 
   public abstract migrate<Output extends object>(

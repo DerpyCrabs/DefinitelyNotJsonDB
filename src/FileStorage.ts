@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { JsonDBOptions } from '.'
 import MemoryStorage from './MemoryStorage'
 
 export default class FileStorage<Schema extends object> extends MemoryStorage<Schema> {
@@ -16,9 +17,9 @@ export default class FileStorage<Schema extends object> extends MemoryStorage<Sc
     }
   }
 
-  public transact(paths?: any): (action: (state: any) => any) => any {
+  public transact(paths?: any, options?: JsonDBOptions<Schema>): (action: (state: any) => any) => any {
     return action => {
-      const result = super.transact(paths)(action)
+      const result = super.transact(paths, options)(action)
       fs.writeFileSync(this.options.filePath, JSON.stringify(this.currentState), { encoding: 'utf-8' })
       return result
     }

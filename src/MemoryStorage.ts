@@ -1,5 +1,7 @@
 import { DBStorage, Paths } from './Storage'
 import produce from 'immer'
+import { JsonDBOptions } from '.'
+import structuredClone from '@ungap/structured-clone'
 
 export default class MemoryStorage<Schema extends object> extends DBStorage<Schema> {
   currentState: Schema
@@ -52,7 +54,7 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
     return this as any
   }
 
-  public transact<Result>(paths?: any): (action: (state: any) => any) => Result {
+  public transact<Result>(paths?: any, options?: JsonDBOptions<Schema>): (action: (state: any) => any) => Result {
     if (!paths) {
       return action => {
         const state = this.currentState
@@ -65,12 +67,19 @@ export default class MemoryStorage<Schema extends object> extends DBStorage<Sche
       }
     } else {
       return action => {
-        const state = actionStateFromPaths(this.currentState, paths)
+        let state = structuredClone(this.currentState)
+        if (options?.beforeTransact) {
+          state = options.beforeTransact({ paths, stateBefore: state })
+        }
+        const actionState = actionStateFromPaths(state, paths)
 
-        const [newState, result] = this.handleTransaction(state, action)
+        const [newActionState, result] = this.handleTransaction(actionState, action)
 
-        setStateFromActionState(paths, newState, this.currentState)
-
+        setStateFromActionState(paths, newActionState, state)
+        if (options?.afterTransact) {
+          state = options.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
+        }
+        this.currentState = state
         return result
       }
     }
