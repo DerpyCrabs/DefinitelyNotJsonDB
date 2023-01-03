@@ -1,28 +1,27 @@
-import JsonDB, { FileStorage, JsonDBOptions } from '../src'
-import MemoryStorage from '../src/MemoryStorage'
+import JsonDB, { JsonDBMiddleware } from '../src'
 import superjson from 'superjson'
 import { existsSync, rmSync } from 'fs'
+import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddleware'
 
-const superjsonMiddleware: JsonDBOptions<any> = {
-  beforeTransact({ stateBefore: { __superjsonMeta, ...stateBefore } }) {
+const superjsonMiddleware = <Schema>(): JsonDBMiddleware<Schema> => ({
+  beforeTransact({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) {
     return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
   },
   afterTransact({ stateAfter }) {
     const { json, meta } = superjson.serialize(stateAfter)
     return { ...(json as any), __superjsonMeta: meta } as any
   },
-  async beforeTransactAsync({ stateBefore: { __superjsonMeta, ...stateBefore } }) {
+  async beforeTransactAsync({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) {
     return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
   },
   async afterTransactAsync({ stateAfter }) {
     const { json, meta } = superjson.serialize(stateAfter)
     return { ...(json as any), __superjsonMeta: meta } as any
   },
-}
+})
 
 test('superjson middleware works with memory storage', () => {
-  const storage = new MemoryStorage<{ field: number; field2: Date }>({ field: 5, field2: new Date() })
-  const db = new JsonDB(storage, superjsonMiddleware)
+  const db = new JsonDB({ field: 5, field2: new Date() }, superjsonMiddleware())
   const res = db.transact({ test: 'field2' })(state => {
     return state.test
   })
@@ -34,14 +33,11 @@ test('superjson middleware works with memory storage', () => {
 })
 
 test('superjson middleware works with file storage', async () => {
-  const storage = new FileStorage(
-    { field: 5, field2: new Date() },
-    {
-      filePath: 'tests/files/example-db3.json',
-    }
-  )
+  const db = new JsonDB({ field: 5, field2: new Date() }, [
+    filePersistenceMiddleware('tests/files/example-db3.json'),
+    superjsonMiddleware(),
+  ])
 
-  const db = new JsonDB(storage, superjsonMiddleware)
   const res = db.transactAsync({ test: 'field2' })(async state => {
     return new Promise(r => r(state.test))
   })
