@@ -25,5 +25,23 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
       fs.writeFileSync(filePath, JSON.stringify(stateAfter), { encoding: 'utf-8' })
       return stateAfter
     },
+    beforeMigrate: ({ stateBefore }) => {
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }))
+      } else {
+        return stateBefore
+      }
+    },
+    afterMigrate: ({ stateAfter }) => {
+      fs.writeFileSync(filePath, JSON.stringify(stateAfter), { encoding: 'utf-8' })
+      return stateAfter
+    },
+    getSnapshot: ({ stateBefore }) => {
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }))
+      } else {
+        return stateBefore
+      }
+    },
   }
 }

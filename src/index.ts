@@ -23,6 +23,9 @@ export type JsonDBMiddleware<Schema> = {
     stateBefore: Schema
     stateAfter: Schema
   }) => Promise<Schema>
+  beforeMigrate?: ({ stateBefore }: { stateBefore: any }) => any
+  afterMigrate?: ({ stateBefore, stateAfter }: { stateBefore: any; stateAfter: any }) => any
+  getSnapshot?: ({ stateBefore }: { stateBefore: Schema }) => Schema
 }
 
 export class JsonDB<Schema extends object> {
@@ -37,84 +40,84 @@ export class JsonDB<Schema extends object> {
   ) {
     this.currentState = initialState
     this.currentMigrationId = currentMigrationId
-    this.middleware = {
+
+    this.middleware = this.composeMiddlewares(middleware)
+  }
+
+  private composeMiddlewares(
+    middleware?: JsonDBMiddleware<Schema> | JsonDBMiddleware<Schema>[]
+  ): Required<JsonDBMiddleware<Schema>> {
+    const noopMiddleware: Required<JsonDBMiddleware<Schema>> = {
+      beforeTransact: ({ stateBefore }) => stateBefore,
+      afterTransact: ({ stateAfter }) => stateAfter,
+      beforeTransactAsync: async ({ stateBefore }) => stateBefore,
+      afterTransactAsync: async ({ stateAfter }) => stateAfter,
+      beforeMigrate: ({ stateBefore }) => stateBefore,
+      afterMigrate: ({ stateAfter }) => stateAfter,
+      getSnapshot: ({ stateBefore }) => stateBefore,
+    }
+
+    const middlewares: Required<JsonDBMiddleware<Schema>>[] = middleware
+      ? Array.isArray(middleware)
+        ? middleware.map(m => ({ ...noopMiddleware, ...m }))
+        : [{ ...noopMiddleware, ...middleware }]
+      : [noopMiddleware]
+
+    return {
       beforeTransact: ({ paths, stateBefore }) => {
-        if (!middleware) {
-          return stateBefore
+        let state = stateBefore
+        for (const fn of middlewares.map(m => m.beforeTransact)) {
+          state = fn({ paths, stateBefore: state })
         }
-        if (Array.isArray(middleware)) {
-          let state = stateBefore
-          for (const fn of middleware.map(m => m.beforeTransact)) {
-            if (fn) {
-              state = fn({ paths, stateBefore: state })
-            }
-          }
-          return state
-        } else if (middleware.beforeTransact) {
-          return middleware.beforeTransact({ paths, stateBefore })
-        } else {
-          return stateBefore
-        }
+        return state
       },
       afterTransact: ({ paths, stateBefore, stateAfter }) => {
-        if (!middleware) {
-          return stateAfter
+        let state = stateAfter
+        for (const fn of middlewares.map(m => m.afterTransact).reverse()) {
+          state = fn({ paths, stateBefore, stateAfter: state })
         }
-        if (Array.isArray(middleware)) {
-          let state = stateAfter
-          for (const fn of middleware.map(m => m.afterTransact).reverse()) {
-            if (fn) {
-              state = fn({ paths, stateBefore, stateAfter: state })
-            }
-          }
-          return state
-        } else if (middleware.afterTransact) {
-          return middleware.afterTransact({ paths, stateBefore, stateAfter })
-        } else {
-          return stateAfter
-        }
+        return state
       },
       beforeTransactAsync: async ({ paths, stateBefore }) => {
-        if (!middleware) {
-          return stateBefore
+        let state = stateBefore
+        for (const fn of middlewares.map(m => m.beforeTransactAsync)) {
+          state = await fn({ paths, stateBefore: state })
         }
-        if (Array.isArray(middleware)) {
-          let state = stateBefore
-          for (const fn of middleware.map(m => m.beforeTransactAsync)) {
-            if (fn) {
-              state = await fn({ paths, stateBefore: state })
-            }
-          }
-          return state
-        } else if (middleware.beforeTransactAsync) {
-          return middleware.beforeTransactAsync({ paths, stateBefore })
-        } else {
-          return stateBefore
-        }
+        return state
       },
       afterTransactAsync: async ({ paths, stateBefore, stateAfter }) => {
-        if (!middleware) {
-          return stateAfter
+        let state = stateAfter
+        for (const fn of middlewares.map(m => m.afterTransactAsync).reverse()) {
+          state = await fn({ paths, stateBefore, stateAfter: state })
         }
-        if (Array.isArray(middleware)) {
-          let state = stateAfter
-          for (const fn of middleware.map(m => m.afterTransactAsync).reverse()) {
-            if (fn) {
-              state = await fn({ paths, stateBefore, stateAfter: state })
-            }
-          }
-          return state
-        } else if (middleware.afterTransactAsync) {
-          return middleware.afterTransactAsync({ paths, stateBefore, stateAfter })
-        } else {
-          return stateAfter
+        return state
+      },
+      beforeMigrate: ({ stateBefore }) => {
+        let state = stateBefore
+        for (const fn of middlewares.map(m => m.beforeMigrate)) {
+          state = fn({ stateBefore: state })
         }
+        return state
+      },
+      afterMigrate: ({ stateBefore, stateAfter }) => {
+        let state = stateAfter
+        for (const fn of middlewares.map(m => m.afterMigrate).reverse()) {
+          state = fn({ stateBefore, stateAfter: state })
+        }
+        return state
+      },
+      getSnapshot: ({ stateBefore }) => {
+        let state = stateBefore
+        for (const fn of middlewares.map(m => m.getSnapshot)) {
+          state = fn({ stateBefore: state })
+        }
+        return state
       },
     }
   }
 
   public getSnapshot(): Schema {
-    return this.currentState
+    return this.middleware.getSnapshot({ stateBefore: this.currentState })
   }
 
   public migrate<Output extends object>(
@@ -122,66 +125,59 @@ export class JsonDB<Schema extends object> {
     apply: (i: Schema) => Output
   ): JsonDB<Output & { __migrationHistory: { id: number; createdAt: string; title: string }[] }> {
     this.currentMigrationId = this.currentMigrationId ? this.currentMigrationId + 1 : 1
-    this.transact()(state => {
-      let migratedState = state
-      let lastMigrationId = state.__migrationHistory
-        ? Math.max(0, ...state.__migrationHistory.map((r: { id: number }) => r.id))
-        : 0
-      if (lastMigrationId >= (this.currentMigrationId || 0)) {
-        console.debug(`Skipped migration ${this.currentMigrationId} - '${title}'`)
-        return state
+
+    let state = structuredClone(this.currentState) as Schema & {
+      __migrationHistory: { id: number; createdAt: string; title: string }[]
+    }
+    state = this.middleware.beforeMigrate({ stateBefore: state })
+
+    let lastMigrationId = state.__migrationHistory
+      ? Math.max(0, ...state.__migrationHistory.map((r: { id: number }) => r.id))
+      : 0
+    if (lastMigrationId >= (this.currentMigrationId || 0)) {
+      console.debug(`Skipped migration ${this.currentMigrationId} - '${title}'`)
+      return this as any
+    }
+    try {
+      let migratedState = {
+        ...apply(state),
+        __migrationHistory: [
+          ...(state.__migrationHistory || []),
+          {
+            id: this.currentMigrationId,
+            title: title,
+            appliedAt: new Date(),
+          },
+        ],
       }
-      try {
-        migratedState = {
-          ...(apply(migratedState) as any),
-          __migrationHistory: [
-            ...(state.__migrationHistory || []),
-            {
-              id: this.currentMigrationId,
-              title: title,
-              appliedAt: new Date(),
-            },
-          ],
-        }
-      } catch (e) {
-        console.error(`Error while applying migration ${this.currentMigrationId} - '${title}'`)
-        throw e
-      }
-      console.debug(`Applied migration ${this.currentMigrationId} - '${title}'`)
-      return migratedState
-    })
+
+      migratedState = this.middleware.afterMigrate({ stateBefore: state, stateAfter: migratedState })
+      this.currentState = migratedState as any
+    } catch (e) {
+      console.error(`Error while applying migration ${this.currentMigrationId} - '${title}'`)
+      throw e
+    }
+    console.debug(`Applied migration ${this.currentMigrationId} - '${title}'`)
 
     return this as any
   }
 
-  public transact<Result>(paths?: any): (action: (state: any) => any) => Result {
-    if (!paths) {
-      return action => {
-        const state = this.currentState
+  public transact<Result>(paths: any): (action: (state: any) => any) => Result {
+    return action => {
+      let state = structuredClone(this.currentState)
 
-        const newState = action(state) as any
+      state = this.middleware.beforeTransact({ paths, stateBefore: state })
 
-        this.currentState = newState
+      const actionState = actionStateFromPaths(state, paths)
 
-        return newState
-      }
-    } else {
-      return action => {
-        let state = structuredClone(this.currentState)
+      const [newActionState, result] = this.handleTransaction(actionState, action)
 
-        state = this.middleware.beforeTransact({ paths, stateBefore: state })
+      setStateFromActionState(paths, newActionState, state)
 
-        const actionState = actionStateFromPaths(state, paths)
+      state = this.middleware.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
 
-        const [newActionState, result] = this.handleTransaction(actionState, action)
-
-        setStateFromActionState(paths, newActionState, state)
-
-        state = this.middleware.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
-
-        this.currentState = state
-        return result
-      }
+      this.currentState = state
+      return result
     }
   }
 

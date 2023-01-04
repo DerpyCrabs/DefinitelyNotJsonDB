@@ -1,24 +1,7 @@
-import JsonDB, { JsonDBMiddleware } from '../src'
-import superjson from 'superjson'
+import JsonDB from '../src'
 import { existsSync, rmSync } from 'fs'
 import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddleware'
-
-const superjsonMiddleware = <Schema>(): JsonDBMiddleware<Schema> => ({
-  beforeTransact({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) {
-    return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
-  },
-  afterTransact({ stateAfter }) {
-    const { json, meta } = superjson.serialize(stateAfter)
-    return { ...(json as any), __superjsonMeta: meta } as any
-  },
-  async beforeTransactAsync({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) {
-    return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
-  },
-  async afterTransactAsync({ stateAfter }) {
-    const { json, meta } = superjson.serialize(stateAfter)
-    return { ...(json as any), __superjsonMeta: meta } as any
-  },
-})
+import superjsonMiddleware from '../src/middlewares/superjsonMiddleware'
 
 test('superjson middleware works with memory storage', () => {
   const db = new JsonDB({ field: 5, field2: new Date() }, superjsonMiddleware())
@@ -46,5 +29,8 @@ test('superjson middleware works with file storage', async () => {
     return state.test
   })
   expect(typeof res2).toBe('object')
+})
+
+afterEach(() => {
   if (existsSync('tests/files/example-db3.json')) rmSync('tests/files/example-db3.json')
 })
