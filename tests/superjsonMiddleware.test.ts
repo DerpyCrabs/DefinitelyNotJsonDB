@@ -3,7 +3,7 @@ import { existsSync, rmSync } from 'fs'
 import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddleware'
 import superjsonMiddleware from '../src/middlewares/superjsonMiddleware'
 
-test('superjson middleware works with memory storage', () => {
+test('works with memory storage', () => {
   const db = new JsonDB({ field: 5, field2: new Date() }, { middleware: superjsonMiddleware() })
   const res = db.transact({ test: 'field2' })(state => {
     return state.test
@@ -15,7 +15,7 @@ test('superjson middleware works with memory storage', () => {
   expect(typeof res2).toBe('object')
 })
 
-test('superjson middleware works with file storage', async () => {
+test('works with file storage', async () => {
   const db = new JsonDB(
     { field: 5, field2: new Date() },
     { middleware: [filePersistenceMiddleware('tests/files/example-db3.json'), superjsonMiddleware()] }

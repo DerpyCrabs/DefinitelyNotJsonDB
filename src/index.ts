@@ -4,6 +4,7 @@ import { A, O, B, S } from 'ts-toolbelt'
 import produce from 'immer'
 import superjson from 'superjson'
 
+// transaction hooks run before and after corresponding methods and allow to change db state at this point
 export type AsyncJsonDBMiddleware<Schema> = {
   beforeTransactAsync?: ({ paths, stateBefore }: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
   afterTransactAsync?: ({
@@ -37,14 +38,14 @@ export type JsonDBMiddleware<Schema> = {
 } & AsyncJsonDBMiddleware<Schema>
 
 export class JsonDB<
-  Schema extends object,
-  IsAsyncOnly extends boolean = false,
-  Middleware = IsAsyncOnly extends true ? AsyncJsonDBMiddleware<Schema> : JsonDBMiddleware<Schema>
+  Schema extends object, // db object schema
+  IsAsyncOnly extends boolean = false, // if true synchronous methods will not be available
+  Middleware = IsAsyncOnly extends true ? AsyncJsonDBMiddleware<Schema> : JsonDBMiddleware<Schema> // only subset of middleware hooks available if IsAsyncOnly = true
 > {
   private currentState: Schema
   private middleware: Required<JsonDBMiddleware<Schema>>
-  private currentMigrationId: number | undefined
-  private isAsyncOnly: boolean
+  private currentMigrationId: number | undefined // number of called migrate/migrateAsync methods
+  private isAsyncOnly: boolean // if true disables synchronous methods
 
   constructor(
     initialState: Schema,
@@ -59,6 +60,7 @@ export class JsonDB<
     )
   }
 
+  // method to compose middleware hooks into single middleware with every hook defined
   private composeMiddlewares(
     middleware?: JsonDBMiddleware<Schema> | JsonDBMiddleware<Schema>[]
   ): Required<JsonDBMiddleware<Schema>> {
@@ -75,12 +77,15 @@ export class JsonDB<
       getSnapshotAsync: async ({ stateBefore }) => stateBefore,
     }
 
+    // transform `middleware` into an array of middlewares adding noop hooks if some hooks are not defined in middleware
     const middlewares: Required<JsonDBMiddleware<Schema>>[] = middleware
       ? Array.isArray(middleware)
         ? middleware.map(m => ({ ...noopMiddleware, ...m }))
         : [{ ...noopMiddleware, ...middleware }]
       : [noopMiddleware]
 
+    // compose array of middlewares into a single middleware
+    // all before function compose start-to-end and after functions compose end-to-start
     return {
       beforeTransact: ({ paths, stateBefore }) => {
         let state = stateBefore
@@ -164,6 +169,7 @@ export class JsonDB<
     return this.middleware.getSnapshotAsync({ stateBefore: this.currentState })
   }
 
+  // migrate method gets a title and an action that transforms current Schema into Output and returns new JsonDB instance with changed Schema type
   public migrate: IsAsyncOnly extends true
     ? never
     : <Output extends object>(
@@ -190,6 +196,7 @@ export class JsonDB<
       return this as any
     }
     try {
+      // apply migration to `state` and write a record to `state.__migrationHistory`
       let migratedState = {
         ...apply(state),
         __migrationHistory: [
@@ -255,6 +262,8 @@ export class JsonDB<
     return this as any
   }
 
+  // transact gets an object where values are paths into this.currentState that will be available to the action
+  // immer is used to allow mutation of values from state in action
   public transact: IsAsyncOnly extends true
     ? never
     : <K extends Paths>(paths: {
@@ -277,6 +286,7 @@ export class JsonDB<
 
         const [state, result] = this.performTransaction(initialState, paths, action)
 
+        // rerun the transaction if some other transaction was applied to state while current transaction was executing
         if (initialState !== this.currentState) {
           continue
         }
@@ -304,6 +314,7 @@ export class JsonDB<
 
         const [state, result] = await this.performAsyncTransaction(initialState, paths, action)
 
+        // rerun the transaction if some other transaction was applied to state while current transaction was executing
         if (initialState !== this.currentState) {
           continue
         }
@@ -316,6 +327,7 @@ export class JsonDB<
   private performTransaction<Result>(initialState: any, paths: Paths, action: (state: any) => Result): [any, Result] {
     let state = this.middleware.beforeTransact({ paths, stateBefore: cloneState(initialState) })
 
+    // create object that has keys as `paths` and values that are field in `state` that were selected by `paths` values
     const actionState = actionStateFromPaths(state, paths)
 
     let result = undefined
@@ -323,6 +335,7 @@ export class JsonDB<
       result = action(s)
     })
 
+    // set `state` fields from `newActionState` following `paths` values
     setStateFromActionState(paths, newActionState, state)
 
     state = this.middleware.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
@@ -337,6 +350,7 @@ export class JsonDB<
   ): Promise<[any, Result]> {
     let state = await this.middleware.beforeTransactAsync({ paths, stateBefore: cloneState(initialState) })
 
+    // create object that has keys as `paths` and values that are field in `state` that were selected by `paths` values
     const actionState = actionStateFromPaths(state, paths)
 
     let result = undefined
@@ -344,6 +358,7 @@ export class JsonDB<
       result = await action(s)
     })
 
+    // set `state` fields from `newActionState` following `paths` values
     setStateFromActionState(paths, newActionState, state)
 
     state = await this.middleware.afterTransactAsync({ paths, stateBefore: this.currentState, stateAfter: state })
@@ -354,6 +369,7 @@ export class JsonDB<
 
 type Paths = { [key: string]: string }
 
+// get field value in `state` following `path`
 function getViewFromPath(state: any, path: (string | number)[]): any {
   let fieldPointer = state
   path.forEach(field => {
@@ -362,12 +378,14 @@ function getViewFromPath(state: any, path: (string | number)[]): any {
   return fieldPointer
 }
 
+// get field values in `state` following `paths` values
 function actionStateFromPaths(state: any, paths: Paths): any {
   return Object.fromEntries(
     Object.entries(paths).map(([fieldName, path]) => [fieldName, getViewFromPath(state, splitPath(path))])
   )
 }
 
+// set `currentState` fields from `actionState` following `paths` values
 function setStateFromActionState(paths: Paths, actionState: { [key: string]: any }, currentState: any) {
   Object.entries(paths).forEach(([fieldName, path]) => {
     let fieldPointer = currentState
