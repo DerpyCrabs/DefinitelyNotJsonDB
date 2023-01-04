@@ -1,6 +1,8 @@
 import { A, O, B, S } from 'ts-toolbelt'
 import produce from 'immer'
-import structuredClone from '@ungap/structured-clone'
+import superjson from 'superjson'
+import filePersistenceMiddleware from './middlewares/filePersistenceMiddleware'
+import superjsonMiddleware from './middlewares/superjsonMiddleware'
 
 export type JsonDBMiddleware<Schema> = {
   beforeTransact?: ({ paths, stateBefore }: { paths: Paths; stateBefore: Schema }) => Schema
@@ -126,7 +128,7 @@ export class JsonDB<Schema extends object> {
   ): JsonDB<Output & { __migrationHistory: { id: number; createdAt: string; title: string }[] }> {
     this.currentMigrationId = this.currentMigrationId ? this.currentMigrationId + 1 : 1
 
-    let state = structuredClone(this.currentState) as Schema & {
+    let state = cloneState(this.currentState) as Schema & {
       __migrationHistory: { id: number; createdAt: string; title: string }[]
     }
     state = this.middleware.beforeMigrate({ stateBefore: state })
@@ -164,7 +166,7 @@ export class JsonDB<Schema extends object> {
 
   public transact<Result>(paths: any): (action: (state: any) => any) => Result {
     return action => {
-      let state = structuredClone(this.currentState)
+      let state = cloneState(this.currentState)
 
       state = this.middleware.beforeTransact({ paths, stateBefore: state })
 
@@ -183,7 +185,7 @@ export class JsonDB<Schema extends object> {
 
   public transactAsync<Result>(paths: any): (action: (state: any) => Promise<any>) => Promise<Result> {
     return async action => {
-      let state = structuredClone(this.currentState)
+      let state = cloneState(this.currentState)
 
       state = await this.middleware.beforeTransactAsync({ paths, stateBefore: state })
 
@@ -283,4 +285,10 @@ function splitPath(path: string): (number | string)[] {
   return path.split('.').map(p => (/^\d+$/.test(p) ? Number.parseInt(p, 10) : p))
 }
 
+function cloneState<Schema>(state: Schema): Schema {
+  return superjson.parse(superjson.stringify(state))
+}
+
 export default JsonDB
+
+export { filePersistenceMiddleware, superjsonMiddleware }
