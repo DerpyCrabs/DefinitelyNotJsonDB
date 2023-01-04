@@ -43,5 +43,12 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
         return stateBefore
       }
     },
+    getSnapshotAsync: async ({ stateBefore }) => {
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }))
+      } else {
+        return stateBefore
+      }
+    },
   }
 }

@@ -28,6 +28,7 @@ export type JsonDBMiddleware<Schema> = {
   beforeMigrate?: ({ stateBefore }: { stateBefore: any }) => any
   afterMigrate?: ({ stateBefore, stateAfter }: { stateBefore: any; stateAfter: any }) => any
   getSnapshot?: ({ stateBefore }: { stateBefore: Schema }) => Schema
+  getSnapshotAsync?: ({ stateBefore }: { stateBefore: Schema }) => Promise<Schema>
 }
 
 export class JsonDB<Schema extends object> {
@@ -57,6 +58,7 @@ export class JsonDB<Schema extends object> {
       beforeMigrate: ({ stateBefore }) => stateBefore,
       afterMigrate: ({ stateAfter }) => stateAfter,
       getSnapshot: ({ stateBefore }) => stateBefore,
+      getSnapshotAsync: async ({ stateBefore }) => stateBefore,
     }
 
     const middlewares: Required<JsonDBMiddleware<Schema>>[] = middleware
@@ -115,11 +117,22 @@ export class JsonDB<Schema extends object> {
         }
         return state
       },
+      getSnapshotAsync: async ({ stateBefore }) => {
+        let state = stateBefore
+        for (const fn of middlewares.map(m => m.getSnapshotAsync)) {
+          state = await fn({ stateBefore: state })
+        }
+        return state
+      },
     }
   }
 
   public getSnapshot(): Schema {
     return this.middleware.getSnapshot({ stateBefore: this.currentState })
+  }
+
+  public getSnapshotAsync(): Promise<Schema> {
+    return this.middleware.getSnapshotAsync({ stateBefore: this.currentState })
   }
 
   public migrate<Output extends object>(

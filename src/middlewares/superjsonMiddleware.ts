@@ -27,5 +27,8 @@ export default function superjsonMiddleware<Schema>(): JsonDBMiddleware<Schema> 
     getSnapshot({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) {
       return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
     },
+    async getSnapshotAsync({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) {
+      return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
+    },
   }
 }
