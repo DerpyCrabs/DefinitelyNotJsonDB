@@ -272,20 +272,17 @@ export class JsonDB<
     if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
 
     return (action: any) => {
-      let state = cloneState(this.currentState)
+      for (;;) {
+        const initialState = this.currentState
 
-      state = this.middleware.beforeTransact({ paths, stateBefore: state })
+        const [state, result] = this.performTransaction(initialState, paths, action)
 
-      const actionState = actionStateFromPaths(state, paths)
-
-      const [newActionState, result] = this.handleTransaction(actionState, action)
-
-      setStateFromActionState(paths, newActionState, state)
-
-      state = this.middleware.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
-
-      this.currentState = state
-      return result
+        if (initialState !== this.currentState) {
+          continue
+        }
+        this.currentState = state
+        return result
+      }
     }
   }) as any
 
@@ -302,44 +299,56 @@ export class JsonDB<
     }) => Promise<Result>
   ) => Promise<Result> = paths => {
     return async action => {
-      let state = cloneState(this.currentState)
+      for (;;) {
+        const initialState = this.currentState
 
-      state = await this.middleware.beforeTransactAsync({ paths, stateBefore: state })
+        const [state, result] = await this.performAsyncTransaction(initialState, paths, action)
 
-      const actionState = actionStateFromPaths(state, paths)
-
-      const [newActionState, result] = await this.handleAsyncTransaction(actionState, action)
-
-      setStateFromActionState(paths, newActionState, state)
-
-      state = await this.middleware.afterTransactAsync({ paths, stateBefore: this.currentState, stateAfter: state })
-
-      this.currentState = state
-      return result
+        if (initialState !== this.currentState) {
+          continue
+        }
+        this.currentState = state
+        return result
+      }
     }
   }
 
-  private handleTransaction<Result>(state: any, action: (state: any) => Result): [any, Result] {
-    let result = undefined
+  private performTransaction<Result>(initialState: any, paths: Paths, action: (state: any) => Result): [any, Result] {
+    let state = this.middleware.beforeTransact({ paths, stateBefore: cloneState(initialState) })
 
-    const newState = produce(state, (s: any) => {
+    const actionState = actionStateFromPaths(state, paths)
+
+    let result = undefined
+    const newActionState = produce(actionState, (s: any) => {
       result = action(s)
     })
 
-    return [newState, result as unknown as Result]
+    setStateFromActionState(paths, newActionState, state)
+
+    state = this.middleware.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
+
+    return [state, result as unknown as Result]
   }
 
-  private async handleAsyncTransaction<Result>(
-    state: any,
+  private async performAsyncTransaction<Result>(
+    initialState: any,
+    paths: Paths,
     action: (state: any) => Promise<Result>
   ): Promise<[any, Result]> {
-    let result = undefined
+    let state = await this.middleware.beforeTransactAsync({ paths, stateBefore: cloneState(initialState) })
 
-    const newState = await produce(state, async (s: any) => {
+    const actionState = actionStateFromPaths(state, paths)
+
+    let result = undefined
+    const newActionState = await produce(actionState, async (s: any) => {
       result = await action(s)
     })
 
-    return [newState, result as unknown as Result]
+    setStateFromActionState(paths, newActionState, state)
+
+    state = await this.middleware.afterTransactAsync({ paths, stateBefore: this.currentState, stateAfter: state })
+
+    return [state, result as unknown as Result]
   }
 }
 

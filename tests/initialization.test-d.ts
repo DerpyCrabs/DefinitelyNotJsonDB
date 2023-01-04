@@ -1,6 +1,6 @@
 import JsonDB from '../src'
 
-test('isAsyncOnly = true prevent usage of sync methods', () => {
+test('isAsyncOnly = true prevents usage of sync methods', () => {
   const db = new JsonDB({ field: 5 }, { isAsyncOnly: true })
   expectTypeOf(db.transact).toBeNever()
   expectTypeOf(db.getSnapshot).toBeNever()
