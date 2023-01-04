@@ -30,7 +30,7 @@ test('can have async transactions', async () => {
 })
 
 test('can be initialized from the file', () => {
-  const db = new JsonDB({} as ExampleSchema, filePersistenceMiddleware('tests/files/example-db.json'))
+  const db = new JsonDB({} as ExampleSchema, { middleware: filePersistenceMiddleware('tests/files/example-db.json') })
   const res = db.transact({ test: 'nestedSchema.stringField' })(state => {
     return state.test
   })
@@ -38,7 +38,7 @@ test('can be initialized from the file', () => {
 })
 
 test('can be initialized with initial data and persist option', async () => {
-  const db = new JsonDB({ field: 5 }, filePersistenceMiddleware('tests/files/example-db2.json'))
+  const db = new JsonDB({ field: 5 }, { middleware: filePersistenceMiddleware('tests/files/example-db2.json') })
   const res = db.transact({ test: 'field' })(state => {
     state.test = 10
     return state.test

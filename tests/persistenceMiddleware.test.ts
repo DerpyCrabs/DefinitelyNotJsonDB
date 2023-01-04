@@ -4,9 +4,12 @@ import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddlew
 
 test('migrations are persisted', () => {
   const filePath = 'tests/files/persistence-db.json'
-  const db = new JsonDB({ field: 5 }, filePersistenceMiddleware(filePath)).migrate('migration', state => ({
-    field2: state.field.toString(),
-  }))
+  const db = new JsonDB({ field: 5 }, { middleware: filePersistenceMiddleware(filePath) }).migrate(
+    'migration',
+    state => ({
+      field2: state.field.toString(),
+    })
+  )
   expect(db.getSnapshot()).toMatchObject({ field2: '5' })
   expect(db.getSnapshot().__migrationHistory.length).toBe(1)
   const fileContents = JSON.parse(readFileSync(filePath, { encoding: 'utf-8' }))

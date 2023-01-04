@@ -4,7 +4,7 @@ import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddlew
 import superjsonMiddleware from '../src/middlewares/superjsonMiddleware'
 
 test('superjson middleware works with memory storage', () => {
-  const db = new JsonDB({ field: 5, field2: new Date() }, superjsonMiddleware())
+  const db = new JsonDB({ field: 5, field2: new Date() }, { middleware: superjsonMiddleware() })
   const res = db.transact({ test: 'field2' })(state => {
     return state.test
   })
@@ -16,10 +16,10 @@ test('superjson middleware works with memory storage', () => {
 })
 
 test('superjson middleware works with file storage', async () => {
-  const db = new JsonDB({ field: 5, field2: new Date() }, [
-    filePersistenceMiddleware('tests/files/example-db3.json'),
-    superjsonMiddleware(),
-  ])
+  const db = new JsonDB(
+    { field: 5, field2: new Date() },
+    { middleware: [filePersistenceMiddleware('tests/files/example-db3.json'), superjsonMiddleware()] }
+  )
 
   const res = db.transactAsync({ test: 'field2' })(async state => {
     return new Promise(r => r(state.test))
