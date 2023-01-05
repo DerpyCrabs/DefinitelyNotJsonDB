@@ -1,7 +1,7 @@
 import filePersistenceMiddleware from './middlewares/filePersistenceMiddleware'
 import superjsonMiddleware from './middlewares/superjsonMiddleware'
 import { A, O, B, S } from 'ts-toolbelt'
-import produce from 'immer'
+import produce, { setAutoFreeze } from 'immer'
 import superjson from 'superjson'
 
 // transaction hooks run before and after corresponding methods and allow to change db state at this point
@@ -58,6 +58,8 @@ export class JsonDB<
     this.middleware = this.composeMiddlewares(
       options?.middleware as JsonDBMiddleware<Schema> | JsonDBMiddleware<Schema>[] | undefined
     )
+
+    setAutoFreeze(false) // disable freezing output of immer's `produce`
   }
 
   // method to compose middleware hooks into single middleware with every hook defined
