@@ -374,9 +374,12 @@ type Paths = { [key: string]: string }
 // get field value in `state` following `path`
 function getViewFromPath(state: any, path: (string | number)[]): any {
   let fieldPointer = state
-  path.forEach(field => {
+  for (let i = 0; i < path.length; i++) {
+    const field = path[i]
+    if (typeof fieldPointer !== 'object' || fieldPointer === null || fieldPointer === undefined) break
+
     fieldPointer = fieldPointer[field]
-  })
+  }
   return fieldPointer
 }
 
@@ -392,10 +395,13 @@ function setStateFromActionState(paths: Paths, actionState: { [key: string]: any
   Object.entries(paths).forEach(([fieldName, path]) => {
     let fieldPointer = currentState
     const pathFields = splitPath(path)
-    pathFields.slice(0, pathFields.length - 1).forEach(field => {
+    for (let i = 0; i < pathFields.length - 1; i++) {
+      const field = pathFields[i]
+      if (fieldPointer === undefined || fieldPointer === null) break
       fieldPointer = fieldPointer[field]
-    })
-    fieldPointer[pathFields[pathFields.length - 1]] = actionState[fieldName]
+    }
+    if (fieldPointer !== undefined && fieldPointer !== null)
+      fieldPointer[pathFields[pathFields.length - 1]] = actionState[fieldName]
   })
 }
 

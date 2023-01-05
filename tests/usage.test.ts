@@ -61,6 +61,43 @@ test('transact path argument supports nested fields', async () => {
   })
 })
 
+test('transact path argument stops traversal on the first undefined or null', async () => {
+  const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, {}, null] } })
+  db.transact({
+    test: 'field3.test2.0.n',
+    test2: 'field3.test2.1.n',
+    test3: 'field3.test2.2',
+    test4: 'field3.test2.2.n',
+    test5: 'field3.test2.3',
+    test6: 'field3.test2.3.n',
+  })(state => {
+    expect(state.test).toStrictEqual(1)
+    expect(state.test2).toStrictEqual(undefined)
+    expect(state.test3).toStrictEqual(null)
+    expect(state.test4).toStrictEqual(null)
+    expect(state.test5).toStrictEqual(undefined)
+    expect(state.test6).toStrictEqual(undefined)
+  })
+})
+
+test('transact can set array members', async () => {
+  const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, {}, null] } })
+  db.transact({
+    test: 'field3.test2.0',
+    test2: 'field3.test2.1',
+    test3: 'field3.test2.2',
+  })(state => {
+    state.test = { n: 2 }
+    state.test2 = { n: 3 }
+    state.test3 = { n: 4 }
+  })
+  expect(db.getSnapshot()).toStrictEqual({
+    field: 5,
+    field2: 's',
+    field3: { test: 't', test2: [{ n: 2 }, { n: 3 }, { n: 4 }] },
+  })
+})
+
 test('async methods return Promise', async () => {
   const db = new JsonDB({ field: 5 })
   const value = db.transactAsync({})(async () => {
