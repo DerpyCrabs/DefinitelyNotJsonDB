@@ -9,6 +9,7 @@ test('getSnapshot returns currentState', () => {
   db.transact({ test: 'field' })(state => {
     state.test = 15
   })
+  assertType<{ field: number }>(db.getSnapshot())
   expect(db.getSnapshot()).toStrictEqual({ field: 15 })
 })
 
@@ -21,6 +22,7 @@ test('getSnapshot async returns currentState', async () => {
   db.transact({ test: 'field' })(state => {
     state.test = 15
   })
+  assertType<Promise<{ field: number }>>(db.getSnapshotAsync())
   expect(await db.getSnapshotAsync()).toStrictEqual({ field: 15 })
 })
 
@@ -40,4 +42,31 @@ test("async transactions don't override each other", async () => {
     })
   })
   expect(await db.getSnapshotAsync()).toStrictEqual({ field: 8 })
+})
+
+test('transact path argument supports nested fields', async () => {
+  const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, { n: 2 }] } })
+  db.transact({
+    test: 'field3',
+    test2: 'field3.test',
+    test3: 'field3.test2',
+    test4: 'field3.test2.0',
+    test5: 'field3.test2.0.n',
+  })(state => {
+    expect(state.test).toStrictEqual({ test: 't', test2: [{ n: 1 }, { n: 2 }] })
+    expect(state.test2).toStrictEqual('t')
+    expect(state.test3).toStrictEqual([{ n: 1 }, { n: 2 }])
+    expect(state.test4).toStrictEqual({ n: 1 })
+    expect(state.test5).toStrictEqual(1)
+  })
+})
+
+test('async methods return Promise', async () => {
+  const db = new JsonDB({ field: 5 })
+  const value = db.transactAsync({})(async () => {
+    return 5
+  })
+  assertType<Promise<number>>(value)
+  const snapshot = db.getSnapshotAsync()
+  assertType<Promise<{ field: number }>>(snapshot)
 })
