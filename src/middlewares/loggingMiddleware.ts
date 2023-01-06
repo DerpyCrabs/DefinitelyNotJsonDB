@@ -1,9 +1,9 @@
 import { JsonDBMiddleware } from '..'
 
 type LoggingMiddlewareOptions<Schema> = {
-  logMigrate: boolean
-  logTransact: boolean
-  logGetSnapshot: boolean
+  logMigrate?: boolean
+  logTransact?: boolean
+  logGetSnapshot?: boolean
   logOutputFn: (data: {
     hook: keyof JsonDBMiddleware<Schema>
     paths?: { [key: string]: string }
@@ -13,7 +13,7 @@ type LoggingMiddlewareOptions<Schema> = {
     migrationTitle?: string
     message: string
   }) => void
-  logBeforeAction: boolean
+  logBeforeAction?: boolean
 }
 
 export default function loggingMiddleware<Schema>({
