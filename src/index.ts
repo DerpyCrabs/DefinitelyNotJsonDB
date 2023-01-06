@@ -33,7 +33,7 @@ export class JsonDB<
   Middleware = IsAsyncOnly extends true ? AsyncJsonDBMiddleware<Schema> : JsonDBMiddleware<Schema> // only subset of middleware hooks available if IsAsyncOnly = true
 > {
   private currentState: Schema
-  private middleware: Required<JsonDBMiddleware<Schema>>
+  private middlewares: JsonDBMiddleware<Schema>[]
   private currentMigrationId: number | undefined // number of called migrate/migrateAsync methods
   private isAsyncOnly: boolean // if true disables synchronous methods
 
@@ -45,120 +45,32 @@ export class JsonDB<
     this.currentState = initialState
     this.currentMigrationId = currentMigrationId
     this.isAsyncOnly = options?.isAsyncOnly || false
-    this.middleware = this.composeMiddlewares(
-      options?.middleware as JsonDBMiddleware<Schema> | JsonDBMiddleware<Schema>[] | undefined
-    )
+    this.middlewares = (
+      options?.middleware ? (Array.isArray(options.middleware) ? options.middleware : [options.middleware]) : []
+    ) as JsonDBMiddleware<Schema>[]
 
     setAutoFreeze(false) // disable freezing output of immer's `produce`
   }
 
-  // method to compose middleware hooks into single middleware with every hook defined
-  private composeMiddlewares(
-    middleware?: JsonDBMiddleware<Schema> | JsonDBMiddleware<Schema>[]
-  ): Required<JsonDBMiddleware<Schema>> {
-    const noopMiddleware: Required<JsonDBMiddleware<Schema>> = {
-      beforeTransact: ({ stateBefore }) => stateBefore,
-      afterTransact: ({ stateAfter }) => stateAfter,
-      beforeTransactAsync: async ({ stateBefore }) => stateBefore,
-      afterTransactAsync: async ({ stateAfter }) => stateAfter,
-      beforeMigrate: ({ stateBefore }) => stateBefore,
-      afterMigrate: ({ stateAfter }) => stateAfter,
-      beforeMigrateAsync: async ({ stateBefore }) => stateBefore,
-      afterMigrateAsync: async ({ stateAfter }) => stateAfter,
-      getSnapshot: ({ stateBefore }) => stateBefore,
-      getSnapshotAsync: async ({ stateBefore }) => stateBefore,
-    }
-
-    // transform `middleware` into an array of middlewares adding noop hooks if some hooks are not defined in middleware
-    const middlewares: Required<JsonDBMiddleware<Schema>>[] = middleware
-      ? Array.isArray(middleware)
-        ? middleware.map(m => ({ ...noopMiddleware, ...m }))
-        : [{ ...noopMiddleware, ...middleware }]
-      : [noopMiddleware]
-
-    // compose array of middlewares into a single middleware
-    // all before function compose start-to-end and after functions compose end-to-start
-    return {
-      beforeTransact: ({ paths, stateBefore }) => {
-        let state = stateBefore
-        for (const fn of middlewares.map(m => m.beforeTransact)) {
-          state = fn({ paths, stateBefore: state })
-        }
-        return state
-      },
-      afterTransact: ({ paths, stateBefore, stateAfter }) => {
-        let state = stateAfter
-        for (const fn of middlewares.map(m => m.afterTransact).reverse()) {
-          state = fn({ paths, stateBefore, stateAfter: state })
-        }
-        return state
-      },
-      beforeTransactAsync: async ({ paths, stateBefore }) => {
-        let state = stateBefore
-        for (const fn of middlewares.map(m => m.beforeTransactAsync)) {
-          state = await fn({ paths, stateBefore: state })
-        }
-        return state
-      },
-      afterTransactAsync: async ({ paths, stateBefore, stateAfter }) => {
-        let state = stateAfter
-        for (const fn of middlewares.map(m => m.afterTransactAsync).reverse()) {
-          state = await fn({ paths, stateBefore, stateAfter: state })
-        }
-        return state
-      },
-      beforeMigrate: ({ stateBefore, migrationId, migrationTitle }) => {
-        let state = stateBefore
-        for (const fn of middlewares.map(m => m.beforeMigrate)) {
-          state = fn({ stateBefore: state, migrationId, migrationTitle })
-        }
-        return state
-      },
-      afterMigrate: ({ stateBefore, stateAfter, migrationId, migrationTitle }) => {
-        let state = stateAfter
-        for (const fn of middlewares.map(m => m.afterMigrate).reverse()) {
-          state = fn({ stateBefore, stateAfter: state, migrationId, migrationTitle })
-        }
-        return state
-      },
-      beforeMigrateAsync: async ({ stateBefore, migrationId, migrationTitle }) => {
-        let state = stateBefore
-        for (const fn of middlewares.map(m => m.beforeMigrateAsync)) {
-          state = await fn({ stateBefore: state, migrationId, migrationTitle })
-        }
-        return state
-      },
-      afterMigrateAsync: async ({ stateBefore, stateAfter, migrationId, migrationTitle }) => {
-        let state = stateAfter
-        for (const fn of middlewares.map(m => m.afterMigrateAsync).reverse()) {
-          state = await fn({ stateBefore, stateAfter: state, migrationId, migrationTitle })
-        }
-        return state
-      },
-      getSnapshot: ({ stateBefore }) => {
-        let state = stateBefore
-        for (const fn of middlewares.map(m => m.getSnapshot)) {
-          state = fn({ stateBefore: state })
-        }
-        return state
-      },
-      getSnapshotAsync: async ({ stateBefore }) => {
-        let state = stateBefore
-        for (const fn of middlewares.map(m => m.getSnapshotAsync)) {
-          state = await fn({ stateBefore: state })
-        }
-        return state
-      },
-    }
-  }
-
   public getSnapshot: IsAsyncOnly extends true ? never : () => Schema = (() => {
     if (this.isAsyncOnly) throw new Error('getSnapshot is not available with isAsyncOnly = true')
-    return this.middleware.getSnapshot({ stateBefore: this.currentState })
+    let result = this.currentState
+    for (const m of this.middlewares) {
+      if (m.getSnapshot) {
+        result = m.getSnapshot({ stateBefore: result })
+      }
+    }
+    return result
   }) as any
 
-  public getSnapshotAsync(): Promise<Schema> {
-    return this.middleware.getSnapshotAsync({ stateBefore: this.currentState })
+  public async getSnapshotAsync(): Promise<Schema> {
+    let result = this.currentState
+    for (const m of this.middlewares) {
+      if (m.getSnapshotAsync) {
+        result = await m.getSnapshotAsync({ stateBefore: result })
+      }
+    }
+    return result
   }
 
   // migrate method gets a title and an action that transforms current Schema into Output and returns new JsonDB instance with changed Schema type
@@ -178,11 +90,15 @@ export class JsonDB<
     let state = cloneState(this.currentState) as Schema & {
       __migrationHistory: { id: number; createdAt: string; title: string }[]
     }
-    state = this.middleware.beforeMigrate({
-      stateBefore: state,
-      migrationId: this.currentMigrationId,
-      migrationTitle: title,
-    })
+
+    let middlewareStates: { middlewareIndex: number; stateBefore: Schema }[] = []
+    for (let index = 0; index < this.middlewares.length; index++) {
+      const m = this.middlewares[index]
+      if (m.beforeMigrate) {
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
+        state = m.beforeMigrate({ stateBefore: state, migrationId: this.currentMigrationId, migrationTitle: title })
+      }
+    }
 
     let lastMigrationId = state.__migrationHistory
       ? Math.max(0, ...state.__migrationHistory.map((r: { id: number }) => r.id))
@@ -205,12 +121,19 @@ export class JsonDB<
         ],
       }
 
-      migratedState = this.middleware.afterMigrate({
-        stateBefore: state,
-        stateAfter: migratedState,
-        migrationId: this.currentMigrationId,
-        migrationTitle: title,
-      })
+      for (let index = this.middlewares.length - 1; index >= 0; index--) {
+        const m = this.middlewares[index]
+        if (m.afterMigrate) {
+          const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+          state = m.afterMigrate({
+            stateBefore: stateBefore,
+            stateAfter: migratedState,
+            migrationId: this.currentMigrationId,
+            migrationTitle: title,
+          })
+        }
+      }
+
       this.currentState = migratedState as any
     } catch (e) {
       console.error(`Error while applying migration ${this.currentMigrationId} - '${title}'`)
@@ -230,11 +153,19 @@ export class JsonDB<
     let state = cloneState(this.currentState) as Schema & {
       __migrationHistory: { id: number; createdAt: string; title: string }[]
     }
-    state = await this.middleware.beforeMigrateAsync({
-      stateBefore: state,
-      migrationId: this.currentMigrationId,
-      migrationTitle: title,
-    })
+
+    let middlewareStates: { middlewareIndex: number; stateBefore: Schema }[] = []
+    for (let index = 0; index < this.middlewares.length; index++) {
+      const m = this.middlewares[index]
+      if (m.beforeMigrateAsync) {
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
+        state = await m.beforeMigrateAsync({
+          stateBefore: state,
+          migrationId: this.currentMigrationId,
+          migrationTitle: title,
+        })
+      }
+    }
 
     let lastMigrationId = state.__migrationHistory
       ? Math.max(0, ...state.__migrationHistory.map((r: { id: number }) => r.id))
@@ -256,12 +187,19 @@ export class JsonDB<
         ],
       }
 
-      migratedState = await this.middleware.afterMigrateAsync({
-        stateBefore: state,
-        stateAfter: migratedState,
-        migrationId: this.currentMigrationId,
-        migrationTitle: title,
-      })
+      for (let index = this.middlewares.length - 1; index >= 0; index--) {
+        const m = this.middlewares[index]
+        if (m.afterMigrateAsync) {
+          const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+          state = await m.afterMigrateAsync({
+            stateBefore: stateBefore,
+            stateAfter: migratedState,
+            migrationId: this.currentMigrationId,
+            migrationTitle: title,
+          })
+        }
+      }
+
       this.currentState = migratedState as any
     } catch (e) {
       console.error(`Error while applying migration ${this.currentMigrationId} - '${title}'`)
@@ -335,7 +273,16 @@ export class JsonDB<
   }
 
   private performTransaction<Result>(initialState: any, paths: Paths, action: (state: any) => Result): [any, Result] {
-    let state = this.middleware.beforeTransact({ paths, stateBefore: cloneState(initialState) })
+    let state = cloneState(initialState)
+
+    let middlewareStates: { middlewareIndex: number; stateBefore: Schema }[] = []
+    for (let index = 0; index < this.middlewares.length; index++) {
+      const m = this.middlewares[index]
+      if (m.beforeTransact) {
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
+        state = m.beforeTransact({ stateBefore: state, paths })
+      }
+    }
 
     // create object that has keys as `paths` and values that are field in `state` that were selected by `paths` values
     const actionState = actionStateFromPaths(state, paths)
@@ -348,7 +295,17 @@ export class JsonDB<
     // set `state` fields from `newActionState` following `paths` values
     setStateFromActionState(paths, newActionState, state)
 
-    state = this.middleware.afterTransact({ paths, stateBefore: this.currentState, stateAfter: state })
+    for (let index = this.middlewares.length - 1; index >= 0; index--) {
+      const m = this.middlewares[index]
+      if (m.afterTransact) {
+        const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+        state = m.afterTransact({
+          stateBefore: stateBefore,
+          stateAfter: state,
+          paths,
+        })
+      }
+    }
 
     return [state, result as unknown as Result]
   }
@@ -358,7 +315,16 @@ export class JsonDB<
     paths: Paths,
     action: (state: any) => Promise<Result>
   ): Promise<[any, Result]> {
-    let state = await this.middleware.beforeTransactAsync({ paths, stateBefore: cloneState(initialState) })
+    let state = cloneState(initialState)
+
+    let middlewareStates: { middlewareIndex: number; stateBefore: Schema }[] = []
+    for (let index = 0; index < this.middlewares.length; index++) {
+      const m = this.middlewares[index]
+      if (m.beforeTransactAsync) {
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
+        state = await m.beforeTransactAsync({ stateBefore: state, paths })
+      }
+    }
 
     // create object that has keys as `paths` and values that are field in `state` that were selected by `paths` values
     const actionState = actionStateFromPaths(state, paths)
@@ -371,7 +337,17 @@ export class JsonDB<
     // set `state` fields from `newActionState` following `paths` values
     setStateFromActionState(paths, newActionState, state)
 
-    state = await this.middleware.afterTransactAsync({ paths, stateBefore: this.currentState, stateAfter: state })
+    for (let index = this.middlewares.length - 1; index >= 0; index--) {
+      const m = this.middlewares[index]
+      if (m.afterTransactAsync) {
+        const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+        state = await m.afterTransactAsync({
+          stateBefore: stateBefore,
+          stateAfter: state,
+          paths,
+        })
+      }
+    }
 
     return [state, result as unknown as Result]
   }

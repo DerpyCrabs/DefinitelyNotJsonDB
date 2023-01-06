@@ -107,3 +107,33 @@ test('async methods return Promise', async () => {
   const snapshot = db.getSnapshotAsync()
   assertType<Promise<{ field: number }>>(snapshot)
 })
+
+test('after* middleware hooks receive same stateBefore as corresponding before* hooks have received', () => {
+  const beforeHook = vi.fn()
+  const afterHook = vi.fn()
+  const db = new JsonDB(
+    { field: 5 },
+    {
+      middleware: [
+        { beforeTransact: ({ stateBefore }) => ({ ...stateBefore, field: stateBefore.field + 5 }) },
+        {
+          beforeTransact: data => {
+            beforeHook(data)
+            return data.stateBefore
+          },
+          afterTransact: data => {
+            afterHook(data)
+            return data.stateAfter
+          },
+        },
+        { beforeTransact: ({ stateBefore }) => ({ ...stateBefore, field: stateBefore.field + 5 }) },
+      ],
+    }
+  )
+  db.transact({})(() => {})
+
+  expect(beforeHook).toHaveBeenCalledWith(expect.objectContaining({ stateBefore: { field: 10 } }))
+  expect(afterHook).toHaveBeenCalledWith(
+    expect.objectContaining({ stateBefore: { field: 10 }, stateAfter: { field: 15 } })
+  )
+})
