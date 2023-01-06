@@ -3,18 +3,28 @@ import fs from 'fs'
 
 export default function filePersistenceMiddleware<Schema>(filePath: string): JsonDBMiddleware<Schema> {
   const beforeFn: JsonDBMiddleware<Schema>['beforeMigrate'] = ({ stateBefore }) => {
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }))
-    } else {
-      return stateBefore
+    try {
+      const fileContents = fs.readFileSync(filePath, { encoding: 'utf-8' })
+      return JSON.parse(fileContents)
+    } catch (e: any) {
+      if ('code' in e && e.code === 'ENOENT') {
+        return stateBefore
+      } else {
+        throw e
+      }
     }
   }
 
   const beforeFnAsync: JsonDBMiddleware<Schema>['beforeMigrateAsync'] = async ({ stateBefore }) => {
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }))
-    } else {
-      return stateBefore
+    try {
+      const fileContents = await fs.promises.readFile(filePath, { encoding: 'utf-8' })
+      return JSON.parse(fileContents)
+    } catch (e: any) {
+      if ('code' in e && e.code === 'ENOENT') {
+        return stateBefore
+      } else {
+        throw e
+      }
     }
   }
 
@@ -24,7 +34,7 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
   }
 
   const afterFnAsync: JsonDBMiddleware<Schema>['afterMigrateAsync'] = async ({ stateAfter }) => {
-    fs.writeFileSync(filePath, JSON.stringify(stateAfter), { encoding: 'utf-8' })
+    await fs.promises.writeFile(filePath, JSON.stringify(stateAfter), { encoding: 'utf-8' })
     return stateAfter
   }
 
