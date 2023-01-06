@@ -1,5 +1,4 @@
 import { JsonDBMiddleware } from '..'
-import { getObjectDiff } from '@donedeal0/superdiff'
 
 type LoggingMiddlewareOptions<Schema> = {
   logMigrate: boolean
@@ -13,7 +12,6 @@ type LoggingMiddlewareOptions<Schema> = {
     migrationId?: number
     migrationTitle?: string
     message: string
-    diff?: ReturnType<typeof getObjectDiff>
   }) => void
   logBeforeAction: boolean
 }
@@ -80,7 +78,6 @@ export default function loggingMiddleware<Schema>({
         migrationTitle,
         message: `afterMigrate: ${migrationId} - ${migrationTitle}`,
         hook: 'afterMigrate',
-        diff: getObjectDiff(stateBefore, stateAfter),
       })
       return stateBefore
     },
@@ -92,7 +89,6 @@ export default function loggingMiddleware<Schema>({
         migrationTitle,
         message: `afterMigrateAsync: ${migrationId} - ${migrationTitle}`,
         hook: 'afterMigrateAsync',
-        diff: getObjectDiff(stateBefore, stateAfter),
       })
       return stateBefore
     },
@@ -103,7 +99,6 @@ export default function loggingMiddleware<Schema>({
         paths,
         message: `afterTransact: ${JSON.stringify(paths)}`,
         hook: 'afterTransact',
-        diff: getObjectDiff(stateBefore, stateAfter),
       })
       return stateBefore
     },
@@ -114,7 +109,6 @@ export default function loggingMiddleware<Schema>({
         paths,
         message: `afterTransactAsync: ${JSON.stringify(paths)}`,
         hook: 'afterTransactAsync',
-        diff: getObjectDiff(stateBefore, stateAfter),
       })
       return stateBefore
     },

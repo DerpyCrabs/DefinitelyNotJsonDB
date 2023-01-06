@@ -26,7 +26,6 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "@donedeal0/superdiff": "^1.0.4",
     "immer": "^9.0.16",
     "superjson": "^1.12.1",
     "ts-toolbelt": "^9.6.0",

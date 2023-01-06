@@ -1,5 +1,6 @@
 import filePersistenceMiddleware from './middlewares/filePersistenceMiddleware'
 import superjsonMiddleware from './middlewares/superjsonMiddleware'
+import loggingMiddleware from './middlewares/loggingMiddleware'
 import { A, O, B, S } from 'ts-toolbelt'
 import produce, { setAutoFreeze } from 'immer'
 import superjson from 'superjson'
@@ -421,4 +422,4 @@ function cloneState<Schema>(state: Schema): Schema {
 }
 
 export default JsonDB
-export { filePersistenceMiddleware, superjsonMiddleware }
+export { filePersistenceMiddleware, superjsonMiddleware, loggingMiddleware }
