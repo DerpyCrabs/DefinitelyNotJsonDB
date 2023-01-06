@@ -6,35 +6,24 @@ import superjson from 'superjson'
 
 // transaction hooks run before and after corresponding methods and allow to change db state at this point
 export type AsyncJsonDBMiddleware<Schema> = {
-  beforeTransactAsync?: ({ paths, stateBefore }: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
-  afterTransactAsync?: ({
-    paths,
-    stateBefore,
-    stateAfter,
-  }: {
-    paths: Paths
-    stateBefore: Schema
-    stateAfter: Schema
-  }) => Promise<Schema>
-  beforeMigrateAsync?: ({ stateBefore }: { stateBefore: any }) => Promise<any>
-  afterMigrateAsync?: ({ stateBefore, stateAfter }: { stateBefore: any; stateAfter: any }) => Promise<any>
-  getSnapshotAsync?: ({ stateBefore }: { stateBefore: Schema }) => Promise<Schema>
+  beforeTransactAsync?: (data: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
+  afterTransactAsync?: (data: { paths: Paths; stateBefore: Schema; stateAfter: Schema }) => Promise<Schema>
+  beforeMigrateAsync?: (data: { stateBefore: any; migrationTitle: string; migrationId: number }) => Promise<any>
+  afterMigrateAsync?: (data: {
+    stateBefore: any
+    stateAfter: any
+    migrationTitle: string
+    migrationId: number
+  }) => Promise<any>
+  getSnapshotAsync?: (data: { stateBefore: Schema }) => Promise<Schema>
 }
 
 export type JsonDBMiddleware<Schema> = {
-  beforeTransact?: ({ paths, stateBefore }: { paths: Paths; stateBefore: Schema }) => Schema
-  afterTransact?: ({
-    paths,
-    stateBefore,
-    stateAfter,
-  }: {
-    paths: Paths
-    stateBefore: Schema
-    stateAfter: Schema
-  }) => Schema
-  beforeMigrate?: ({ stateBefore }: { stateBefore: any }) => any
-  afterMigrate?: ({ stateBefore, stateAfter }: { stateBefore: any; stateAfter: any }) => any
-  getSnapshot?: ({ stateBefore }: { stateBefore: Schema }) => Schema
+  beforeTransact?: (data: { paths: Paths; stateBefore: Schema }) => Schema
+  afterTransact?: (data: { paths: Paths; stateBefore: Schema; stateAfter: Schema }) => Schema
+  beforeMigrate?: (data: { stateBefore: any; migrationTitle: string; migrationId: number }) => any
+  afterMigrate?: (data: { stateBefore: any; stateAfter: any; migrationTitle: string; migrationId: number }) => any
+  getSnapshot?: (data: { stateBefore: Schema }) => Schema
 } & AsyncJsonDBMiddleware<Schema>
 
 export class JsonDB<
@@ -117,31 +106,31 @@ export class JsonDB<
         }
         return state
       },
-      beforeMigrate: ({ stateBefore }) => {
+      beforeMigrate: ({ stateBefore, migrationId, migrationTitle }) => {
         let state = stateBefore
         for (const fn of middlewares.map(m => m.beforeMigrate)) {
-          state = fn({ stateBefore: state })
+          state = fn({ stateBefore: state, migrationId, migrationTitle })
         }
         return state
       },
-      afterMigrate: ({ stateBefore, stateAfter }) => {
+      afterMigrate: ({ stateBefore, stateAfter, migrationId, migrationTitle }) => {
         let state = stateAfter
         for (const fn of middlewares.map(m => m.afterMigrate).reverse()) {
-          state = fn({ stateBefore, stateAfter: state })
+          state = fn({ stateBefore, stateAfter: state, migrationId, migrationTitle })
         }
         return state
       },
-      beforeMigrateAsync: async ({ stateBefore }) => {
+      beforeMigrateAsync: async ({ stateBefore, migrationId, migrationTitle }) => {
         let state = stateBefore
         for (const fn of middlewares.map(m => m.beforeMigrateAsync)) {
-          state = await fn({ stateBefore: state })
+          state = await fn({ stateBefore: state, migrationId, migrationTitle })
         }
         return state
       },
-      afterMigrateAsync: async ({ stateBefore, stateAfter }) => {
+      afterMigrateAsync: async ({ stateBefore, stateAfter, migrationId, migrationTitle }) => {
         let state = stateAfter
         for (const fn of middlewares.map(m => m.afterMigrateAsync).reverse()) {
-          state = await fn({ stateBefore, stateAfter: state })
+          state = await fn({ stateBefore, stateAfter: state, migrationId, migrationTitle })
         }
         return state
       },
@@ -188,7 +177,11 @@ export class JsonDB<
     let state = cloneState(this.currentState) as Schema & {
       __migrationHistory: { id: number; createdAt: string; title: string }[]
     }
-    state = this.middleware.beforeMigrate({ stateBefore: state })
+    state = this.middleware.beforeMigrate({
+      stateBefore: state,
+      migrationId: this.currentMigrationId,
+      migrationTitle: title,
+    })
 
     let lastMigrationId = state.__migrationHistory
       ? Math.max(0, ...state.__migrationHistory.map((r: { id: number }) => r.id))
@@ -211,7 +204,12 @@ export class JsonDB<
         ],
       }
 
-      migratedState = this.middleware.afterMigrate({ stateBefore: state, stateAfter: migratedState })
+      migratedState = this.middleware.afterMigrate({
+        stateBefore: state,
+        stateAfter: migratedState,
+        migrationId: this.currentMigrationId,
+        migrationTitle: title,
+      })
       this.currentState = migratedState as any
     } catch (e) {
       console.error(`Error while applying migration ${this.currentMigrationId} - '${title}'`)
@@ -231,7 +229,11 @@ export class JsonDB<
     let state = cloneState(this.currentState) as Schema & {
       __migrationHistory: { id: number; createdAt: string; title: string }[]
     }
-    state = await this.middleware.beforeMigrateAsync({ stateBefore: state })
+    state = await this.middleware.beforeMigrateAsync({
+      stateBefore: state,
+      migrationId: this.currentMigrationId,
+      migrationTitle: title,
+    })
 
     let lastMigrationId = state.__migrationHistory
       ? Math.max(0, ...state.__migrationHistory.map((r: { id: number }) => r.id))
@@ -253,7 +255,12 @@ export class JsonDB<
         ],
       }
 
-      migratedState = await this.middleware.afterMigrateAsync({ stateBefore: state, stateAfter: migratedState })
+      migratedState = await this.middleware.afterMigrateAsync({
+        stateBefore: state,
+        stateAfter: migratedState,
+        migrationId: this.currentMigrationId,
+        migrationTitle: title,
+      })
       this.currentState = migratedState as any
     } catch (e) {
       console.error(`Error while applying migration ${this.currentMigrationId} - '${title}'`)

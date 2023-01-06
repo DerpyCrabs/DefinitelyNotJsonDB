@@ -2,7 +2,7 @@ import type { JsonDBMiddleware } from '..'
 import fs from 'fs'
 
 export default function filePersistenceMiddleware<Schema>(filePath: string): JsonDBMiddleware<Schema> {
-  const beforeFn: JsonDBMiddleware<Schema>['beforeMigrate'] = ({ stateBefore }) => {
+  const beforeFn = ({ stateBefore }: any) => {
     try {
       const fileContents = fs.readFileSync(filePath, { encoding: 'utf-8' })
       return JSON.parse(fileContents)
@@ -15,7 +15,7 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
     }
   }
 
-  const beforeFnAsync: JsonDBMiddleware<Schema>['beforeMigrateAsync'] = async ({ stateBefore }) => {
+  const beforeFnAsync = async ({ stateBefore }: any) => {
     try {
       const fileContents = await fs.promises.readFile(filePath, { encoding: 'utf-8' })
       return JSON.parse(fileContents)
@@ -28,12 +28,12 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
     }
   }
 
-  const afterFn: JsonDBMiddleware<Schema>['afterMigrate'] = ({ stateAfter }) => {
+  const afterFn = ({ stateAfter }: any) => {
     fs.writeFileSync(filePath, JSON.stringify(stateAfter), { encoding: 'utf-8' })
     return stateAfter
   }
 
-  const afterFnAsync: JsonDBMiddleware<Schema>['afterMigrateAsync'] = async ({ stateAfter }) => {
+  const afterFnAsync = async ({ stateAfter }: any) => {
     await fs.promises.writeFile(filePath, JSON.stringify(stateAfter), { encoding: 'utf-8' })
     return stateAfter
   }

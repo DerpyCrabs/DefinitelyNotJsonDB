@@ -2,24 +2,20 @@ import { JsonDBMiddleware } from '..'
 import superjson from 'superjson'
 
 export default function superjsonMiddleware<Schema>(): JsonDBMiddleware<Schema> {
-  const beforeFn: JsonDBMiddleware<Schema>['beforeMigrate'] = ({
-    stateBefore: { __superjsonMeta, ...stateBefore },
-  }) => {
+  const beforeFn = ({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) => {
     return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
   }
 
-  const beforeFnAsync: JsonDBMiddleware<Schema>['beforeMigrateAsync'] = async ({
-    stateBefore: { __superjsonMeta, ...stateBefore },
-  }) => {
+  const beforeFnAsync = async ({ stateBefore: { __superjsonMeta, ...stateBefore } }: any) => {
     return superjson.deserialize({ json: stateBefore, meta: __superjsonMeta || {} })
   }
 
-  const afterFn: JsonDBMiddleware<Schema>['afterMigrate'] = ({ stateAfter }) => {
+  const afterFn = ({ stateAfter }: any) => {
     const { json, meta } = superjson.serialize(stateAfter)
     return { ...(json as any), __superjsonMeta: meta } as any
   }
 
-  const afterFnAsync: JsonDBMiddleware<Schema>['afterMigrateAsync'] = async ({ stateAfter }) => {
+  const afterFnAsync = async ({ stateAfter }: any) => {
     const { json, meta } = superjson.serialize(stateAfter)
     return { ...(json as any), __superjsonMeta: meta } as any
   }
@@ -35,5 +31,5 @@ export default function superjsonMiddleware<Schema>(): JsonDBMiddleware<Schema> 
     afterMigrateAsync: afterFnAsync,
     getSnapshot: beforeFn,
     getSnapshotAsync: beforeFnAsync,
-  }
+  } as any
 }
