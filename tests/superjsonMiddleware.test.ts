@@ -31,6 +31,20 @@ test('works with file storage', async () => {
   expect(typeof res2).toBe('object')
 })
 
+test(`doesn't set getSnapshot/getSnapshotAsync hooks to not break backups`, () => {
+  const db = new JsonDB({ field: 5, field2: new Date() }, { middleware: [superjsonMiddleware()] })
+  db.transact({ field: 'field' })(state => {
+    state.field = 10
+  })
+  const backup = JSON.parse(JSON.stringify(db.getSnapshot()))
+
+  const restoredDb = new JsonDB(backup, { middleware: [superjsonMiddleware()] })
+  restoredDb.transact({ field: 'field', field2: 'field2' })(state => {
+    expect(state.field).toBe(10)
+    expect(typeof state.field2).toBe('object')
+  })
+})
+
 afterEach(() => {
   if (existsSync('tests/files/example-db3.json')) rmSync('tests/files/example-db3.json')
 })

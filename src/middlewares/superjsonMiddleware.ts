@@ -29,7 +29,5 @@ export default function superjsonMiddleware<Schema>(): JsonDBMiddleware<Schema> 
     afterMigrate: afterFn,
     beforeMigrateAsync: beforeFnAsync,
     afterMigrateAsync: afterFnAsync,
-    getSnapshot: beforeFn,
-    getSnapshotAsync: beforeFnAsync,
   } as any
 }
