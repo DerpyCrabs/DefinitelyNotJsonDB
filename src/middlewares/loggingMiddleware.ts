@@ -1,18 +1,39 @@
 import { JsonDBMiddleware } from '..'
 
+type LogOutputFnData<Schema> = {
+  stateBefore: Schema
+  message: string
+} & (
+  | {
+      hook: 'beforeTransact' | 'beforeTransactAsync'
+      paths: { [key: string]: string }
+    }
+  | {
+      hook: 'afterTransact' | 'afterTransactAsync'
+      paths: { [key: string]: string }
+      stateAfter: Schema
+    }
+  | {
+      hook: 'beforeMigrate' | 'beforeMigrateAsync'
+      migrationId: number
+      migrationTitle: string
+    }
+  | {
+      hook: 'afterMigrate' | 'afterMigrateAsync'
+      migrationId: number
+      migrationTitle: string
+      stateAfter: Schema
+    }
+  | {
+      hook: 'getSnapshot' | 'getSnapshotAsync'
+    }
+)
+
 type LoggingMiddlewareOptions<Schema> = {
   logMigrate?: boolean
   logTransact?: boolean
   logGetSnapshot?: boolean
-  logOutputFn: (data: {
-    hook: keyof JsonDBMiddleware<Schema>
-    paths?: { [key: string]: string }
-    stateBefore: Schema
-    stateAfter?: Schema
-    migrationId?: number
-    migrationTitle?: string
-    message: string
-  }) => void
+  logOutputFn: (data: LogOutputFnData<Schema>) => void
   logBeforeAction?: boolean
 }
 
