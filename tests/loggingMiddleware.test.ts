@@ -59,3 +59,23 @@ test('logOutputFn logBeforeAction = false disables before* hooks', async () => {
 
   expect(logOutputFnSpy).toHaveBeenCalledTimes(6) // without beforeMigrate, beforeMigrateAsync, beforeTransact, beforeTransactAsync
 })
+
+test('logOutputFn in afterTransact receives correct stateBefore', async () => {
+  const logOutputFnSpy = vi.fn()
+  const db = await new JsonDB(
+    { field: 5 },
+    {
+      middleware: loggingMiddleware({
+        logOutputFn: logOutputFnSpy,
+      }),
+    }
+  )
+
+  db.transact({ test: 'field' })(state => {
+    state.test = 10
+  })
+
+  expect(logOutputFnSpy).toHaveBeenCalledWith(
+    expect.objectContaining({ stateBefore: { field: 5 }, stateAfter: { field: 10 } })
+  )
+})

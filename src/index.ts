@@ -124,7 +124,7 @@ export class JsonDB<
       for (let index = this.middlewares.length - 1; index >= 0; index--) {
         const m = this.middlewares[index]
         if (m.afterMigrate) {
-          const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+          const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || this.currentState
           state = m.afterMigrate({
             stateBefore: stateBefore,
             stateAfter: migratedState,
@@ -190,7 +190,7 @@ export class JsonDB<
       for (let index = this.middlewares.length - 1; index >= 0; index--) {
         const m = this.middlewares[index]
         if (m.afterMigrateAsync) {
-          const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+          const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || this.currentState
           state = await m.afterMigrateAsync({
             stateBefore: stateBefore,
             stateAfter: migratedState,
@@ -298,7 +298,7 @@ export class JsonDB<
     for (let index = this.middlewares.length - 1; index >= 0; index--) {
       const m = this.middlewares[index]
       if (m.afterTransact) {
-        const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+        const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || initialState
         state = m.afterTransact({
           stateBefore: stateBefore,
           stateAfter: state,
@@ -340,7 +340,7 @@ export class JsonDB<
     for (let index = this.middlewares.length - 1; index >= 0; index--) {
       const m = this.middlewares[index]
       if (m.afterTransactAsync) {
-        const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || state
+        const stateBefore = middlewareStates.find(s => s.middlewareIndex <= index)?.stateBefore || initialState
         state = await m.afterTransactAsync({
           stateBefore: stateBefore,
           stateAfter: state,
