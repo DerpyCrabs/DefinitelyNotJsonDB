@@ -13,12 +13,15 @@
     "test": "vitest",
     "build": "vite build",
     "test-types": "vitest typecheck --run",
-    "bench": "vitest bench"
+    "bench": "vitest bench",
+    "coverage": "vitest run --coverage"
   },
   "author": "Vyacheslav Goma <derpycrabs@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^18.11.9",
+    "@vitest/coverage-c8": "^0.27.1",
+    "c8": "^7.12.0",
     "typescript": "^4.9.3",
     "vite": "^3.2.4",
     "vite-plugin-dts": "^1.7.1",
