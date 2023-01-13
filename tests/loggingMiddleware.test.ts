@@ -8,6 +8,7 @@ test('calling methods of db calls logOutputFn', () => {
     {
       middleware: loggingMiddleware({
         logOutputFn: logOutputFnSpy,
+        diffColor: false,
       }),
     }
   )
@@ -15,7 +16,18 @@ test('calling methods of db calls logOutputFn', () => {
     state.test = 10
   })
   expect(logOutputFnSpy).toHaveBeenCalledTimes(1)
-  expect(logOutputFnSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'afterTransact: {"test":"field"}' }))
+  expect(logOutputFnSpy).toHaveBeenCalledWith(
+    expect.objectContaining({
+      stateBefore: { field: 5 },
+      stateAfter: { field: 10 },
+      message: `afterTransact: {"test":"field"}
+ {
+-  field: 5
++  field: 10
+ }
+`,
+    })
+  )
 })
 
 test('logOutputFn is called on every hook', async () => {

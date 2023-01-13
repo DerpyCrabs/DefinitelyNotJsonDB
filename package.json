@@ -19,6 +19,7 @@
   "author": "Vyacheslav Goma <derpycrabs@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@types/json-diff": "^0.9.1",
     "@types/node": "^18.11.9",
     "@vitest/coverage-c8": "^0.27.1",
     "c8": "^7.12.0",
@@ -30,6 +31,7 @@
   "sideEffects": false,
   "dependencies": {
     "immer": "^9.0.16",
+    "json-diff": "^1.0.0",
     "superjson": "^1.12.1",
     "ts-toolbelt": "^9.6.0",
     "tslib": "^2.4.1"

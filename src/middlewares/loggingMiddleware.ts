@@ -1,4 +1,5 @@
 import { JsonDBMiddleware } from '..'
+import { diffString } from 'json-diff'
 
 type LogOutputFnData<Schema> = {
   stateBefore: Schema
@@ -35,6 +36,8 @@ type LoggingMiddlewareOptions<Schema> = {
   logGetSnapshot?: boolean
   logOutputFn: (data: LogOutputFnData<Schema>) => void
   logBeforeAction?: boolean
+  diff?: boolean
+  diffColor?: boolean
 }
 
 export default function loggingMiddleware<Schema>({
@@ -43,7 +46,16 @@ export default function loggingMiddleware<Schema>({
   logGetSnapshot = true,
   logOutputFn,
   logBeforeAction = false,
+  diff = true,
+  diffColor = true,
 }: LoggingMiddlewareOptions<Schema>): JsonDBMiddleware<Schema> {
+  const printDiff = (stateBefore: any, stateAfter: any): string => {
+    if (diff) {
+      return `\n${diffString(stateBefore, stateAfter, { color: diffColor })}`
+    } else {
+      return ''
+    }
+  }
   const middleware: Required<JsonDBMiddleware<Schema>> = {
     getSnapshot: ({ stateBefore }) => {
       logOutputFn({ stateBefore, message: 'getSnapshot was called', hook: 'getSnapshot' })
@@ -97,7 +109,7 @@ export default function loggingMiddleware<Schema>({
         stateAfter,
         migrationId,
         migrationTitle,
-        message: `afterMigrate: ${migrationId} - ${migrationTitle}`,
+        message: `afterMigrate: ${migrationId} - ${migrationTitle}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterMigrate',
       })
       return stateBefore
@@ -108,7 +120,7 @@ export default function loggingMiddleware<Schema>({
         stateAfter,
         migrationId,
         migrationTitle,
-        message: `afterMigrateAsync: ${migrationId} - ${migrationTitle}`,
+        message: `afterMigrateAsync: ${migrationId} - ${migrationTitle}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterMigrateAsync',
       })
       return stateBefore
@@ -118,7 +130,7 @@ export default function loggingMiddleware<Schema>({
         stateBefore,
         stateAfter,
         paths,
-        message: `afterTransact: ${JSON.stringify(paths)}`,
+        message: `afterTransact: ${JSON.stringify(paths)}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterTransact',
       })
       return stateBefore
@@ -128,7 +140,7 @@ export default function loggingMiddleware<Schema>({
         stateBefore,
         stateAfter,
         paths,
-        message: `afterTransactAsync: ${JSON.stringify(paths)}`,
+        message: `afterTransactAsync: ${JSON.stringify(paths)}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterTransactAsync',
       })
       return stateBefore
