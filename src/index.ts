@@ -95,8 +95,8 @@ export class JsonDB<
     for (let index = 0; index < this.middlewares.length; index++) {
       const m = this.middlewares[index]
       if (m.beforeMigrate) {
-        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
         state = m.beforeMigrate({ stateBefore: state, migrationId: this.currentMigrationId, migrationTitle: title })
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
       }
     }
 
@@ -158,12 +158,12 @@ export class JsonDB<
     for (let index = 0; index < this.middlewares.length; index++) {
       const m = this.middlewares[index]
       if (m.beforeMigrateAsync) {
-        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
         state = await m.beforeMigrateAsync({
           stateBefore: state,
           migrationId: this.currentMigrationId,
           migrationTitle: title,
         })
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
       }
     }
 
@@ -279,8 +279,8 @@ export class JsonDB<
     for (let index = 0; index < this.middlewares.length; index++) {
       const m = this.middlewares[index]
       if (m.beforeTransact) {
-        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
         state = m.beforeTransact({ stateBefore: state, paths })
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
       }
     }
 
@@ -293,6 +293,7 @@ export class JsonDB<
     })
 
     // set `state` fields from `newActionState` following `paths` values
+    state = this.middlewares.length !== 0 ? cloneState(state) : state
     setStateFromActionState(paths, newActionState, state)
 
     for (let index = this.middlewares.length - 1; index >= 0; index--) {
@@ -321,8 +322,8 @@ export class JsonDB<
     for (let index = 0; index < this.middlewares.length; index++) {
       const m = this.middlewares[index]
       if (m.beforeTransactAsync) {
-        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
         state = await m.beforeTransactAsync({ stateBefore: state, paths })
+        middlewareStates = [{ middlewareIndex: index, stateBefore: state }, ...middlewareStates]
       }
     }
 
@@ -335,6 +336,7 @@ export class JsonDB<
     })
 
     // set `state` fields from `newActionState` following `paths` values
+    state = this.middlewares.length !== 0 ? cloneState(state) : state
     setStateFromActionState(paths, newActionState, state)
 
     for (let index = this.middlewares.length - 1; index >= 0; index--) {
