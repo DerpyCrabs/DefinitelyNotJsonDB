@@ -16,6 +16,7 @@ export type AsyncJsonDBMiddleware<Schema> = {
     migrationTitle: string
     migrationId: number
   }) => Promise<any>
+  getAsync?: (data: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
   getSnapshotAsync?: (data: { stateBefore: Schema }) => Promise<Schema>
 }
 
@@ -24,6 +25,7 @@ export type JsonDBMiddleware<Schema> = {
   afterTransact?: (data: { paths: Paths; stateBefore: Schema; stateAfter: Schema }) => Schema
   beforeMigrate?: (data: { stateBefore: any; migrationTitle: string; migrationId: number }) => any
   afterMigrate?: (data: { stateBefore: any; stateAfter: any; migrationTitle: string; migrationId: number }) => any
+  get?: (data: { paths: Paths; stateBefore: Schema }) => Schema
   getSnapshot?: (data: { stateBefore: Schema }) => Schema
 } & AsyncJsonDBMiddleware<Schema>
 
@@ -209,6 +211,56 @@ export class JsonDB<
 
     return this as any
   }
+
+  public get: IsAsyncOnly extends true
+    ? never
+    : <K extends Paths>(paths: {
+        [key in keyof K]: B.Or<
+          A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
+          A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
+        > extends 1
+          ? never
+          : K[key]
+      }) => {
+        [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
+      } = ((paths: any) => {
+    if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
+
+    let state = cloneState(this.currentState)
+
+    for (let index = 0; index < this.middlewares.length; index++) {
+      const m = this.middlewares[index]
+      if (m.get) {
+        state = m.get({ stateBefore: state, paths })
+      }
+    }
+
+    // create object that has keys as `paths` and values that are field in `state` that were selected by `paths` values
+    return actionStateFromPaths(state, paths)
+  }) as any
+
+  public getAsync: <K extends Paths>(paths: {
+    [key in keyof K]: B.Or<
+      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
+      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
+    > extends 1
+      ? never
+      : K[key]
+  }) => Promise<{
+    [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
+  }> = (async (paths: any) => {
+    let state = cloneState(this.currentState)
+
+    for (let index = 0; index < this.middlewares.length; index++) {
+      const m = this.middlewares[index]
+      if (m.getAsync) {
+        state = await m.getAsync({ stateBefore: state, paths })
+      }
+    }
+
+    // create object that has keys as `paths` and values that are field in `state` that were selected by `paths` values
+    return actionStateFromPaths(state, paths)
+  }) as any
 
   // transact gets an object where values are paths into this.currentState that will be available to the action
   // immer is used to allow mutation of values from state in action

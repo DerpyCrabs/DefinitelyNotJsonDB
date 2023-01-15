@@ -10,6 +10,10 @@ type LogOutputFnData<Schema> = {
       paths: { [key: string]: string }
     }
   | {
+      hook: 'get' | 'getAsync'
+      paths: { [key: string]: string }
+    }
+  | {
       hook: 'afterTransact' | 'afterTransactAsync'
       paths: { [key: string]: string }
       stateAfter: Schema
@@ -82,6 +86,24 @@ export default function loggingMiddleware<Schema>({
         migrationTitle,
         message: `beforeMigrateAsync: ${migrationId} - ${migrationTitle}`,
         hook: 'beforeMigrateAsync',
+      })
+      return stateBefore
+    },
+    get: ({ stateBefore, paths }) => {
+      logOutputFn({
+        stateBefore,
+        paths,
+        message: `get: ${JSON.stringify(paths)}`,
+        hook: 'get',
+      })
+      return stateBefore
+    },
+    getAsync: async ({ stateBefore, paths }) => {
+      logOutputFn({
+        stateBefore,
+        paths,
+        message: `getAsync: ${JSON.stringify(paths)}`,
+        hook: 'getAsync',
       })
       return stateBefore
     },

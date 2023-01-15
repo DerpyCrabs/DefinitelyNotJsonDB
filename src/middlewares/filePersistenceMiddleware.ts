@@ -47,6 +47,8 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
     afterMigrate: afterFn,
     beforeMigrateAsync: beforeFnAsync,
     afterMigrateAsync: afterFnAsync,
+    get: beforeFn,
+    getAsync: beforeFnAsync,
     getSnapshot: beforeFn,
     getSnapshotAsync: beforeFnAsync,
   }
