@@ -224,7 +224,7 @@ export class JsonDB<
       }) => {
         [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
       } = ((paths: any) => {
-    if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
+    if (this.isAsyncOnly) throw new Error('get is not available with isAsyncOnly = true')
 
     let state = cloneState(this.currentState)
 
