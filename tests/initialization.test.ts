@@ -10,17 +10,13 @@ test('can be initialized with initial data', () => {
     return state.test
   })
   expect(res).toBe(10)
-  const res2 = db.transact({ test: 'field' })(state => {
-    return state.test
-  })
+  const res2 = db.get({ test: 'field' }).test
   expect(res2).toBe(10)
 })
 
 test('can be initialized from the file', () => {
   const db = new JsonDB({} as ExampleSchema, { middleware: filePersistenceMiddleware('tests/files/example-db.json') })
-  const res = db.transact({ test: 'nestedSchema.stringField' })(state => {
-    return state.test
-  })
+  const res = db.get({ test: 'nestedSchema.stringField' }).test
   expect(res).toBe('nested')
 })
 

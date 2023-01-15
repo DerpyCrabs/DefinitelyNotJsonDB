@@ -67,3 +67,23 @@ test('transact path argument supports nested fields', async () => {
     }>(state)
   })
 })
+
+test('get returns the type of an object created from db state paths', () => {
+  const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, { n: 2 }] } })
+  const value = db.get({ test: 'field' })
+  assertType<{ test: number }>(value)
+  const value2 = db.get({
+    test: 'field3',
+    test2: 'field3.test',
+    test3: 'field3.test2',
+    test4: 'field3.test2.0',
+    test5: 'field3.test2.0.n',
+  })
+  assertType<{
+    test: { test: string; test2: { n: number }[] }
+    test2: string
+    test3: { n: number }[]
+    test4: { n: number } | undefined
+    test5: number | undefined
+  }>(value2)
+})

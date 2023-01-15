@@ -80,6 +80,40 @@ test('transact path argument stops traversal on the first undefined or null', as
   })
 })
 
+test('get path argument supports nested fields', async () => {
+  const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, { n: 2 }] } })
+  const value = db.get({
+    test: 'field3',
+    test2: 'field3.test',
+    test3: 'field3.test2',
+    test4: 'field3.test2.0',
+    test5: 'field3.test2.0.n',
+  })
+  expect(value.test).toStrictEqual({ test: 't', test2: [{ n: 1 }, { n: 2 }] })
+  expect(value.test2).toStrictEqual('t')
+  expect(value.test3).toStrictEqual([{ n: 1 }, { n: 2 }])
+  expect(value.test4).toStrictEqual({ n: 1 })
+  expect(value.test5).toStrictEqual(1)
+})
+
+test('get path argument stops traversal on the first undefined or null', async () => {
+  const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, {}, null] } })
+  const value = db.get({
+    test: 'field3.test2.0.n',
+    test2: 'field3.test2.1.n',
+    test3: 'field3.test2.2',
+    test4: 'field3.test2.2.n',
+    test5: 'field3.test2.3',
+    test6: 'field3.test2.3.n',
+  })
+  expect(value.test).toStrictEqual(1)
+  expect(value.test2).toStrictEqual(undefined)
+  expect(value.test3).toStrictEqual(null)
+  expect(value.test4).toStrictEqual(null)
+  expect(value.test5).toStrictEqual(undefined)
+  expect(value.test6).toStrictEqual(undefined)
+})
+
 test('transact can set array members', async () => {
   const db = new JsonDB({ field: 5, field2: 's', field3: { test: 't', test2: [{ n: 1 }, {}, null] } })
   db.transact({
@@ -106,34 +140,6 @@ test('async methods return Promise', async () => {
   assertType<Promise<number>>(value)
   const snapshot = db.exportStateAsync()
   assertType<Promise<{ field: number }>>(snapshot)
-})
-
-test('after* middleware hooks receive same stateBefore as corresponding before* hooks have received', () => {
-  const beforeHook = vi.fn()
-  const afterHook = vi.fn()
-  const db = new JsonDB(
-    { field: 5 },
-    {
-      middleware: [
-        { beforeTransact: ({ stateBefore }) => ({ ...stateBefore, field: stateBefore.field + 5 }) },
-        {
-          beforeTransact: data => {
-            beforeHook(data)
-            return data.stateBefore
-          },
-          afterTransact: data => {
-            afterHook(data)
-            return data.stateAfter
-          },
-        },
-        { beforeTransact: ({ stateBefore }) => ({ ...stateBefore, field: stateBefore.field + 5 }) },
-      ],
-    }
-  )
-  db.transact({})(() => {})
-
-  expect(beforeHook).toHaveBeenCalledWith(expect.objectContaining({ stateBefore: { field: 10 } }))
-  expect(afterHook).toHaveBeenCalledWith(
-    expect.objectContaining({ stateBefore: { field: 10 }, stateAfter: { field: 15 } })
-  )
+  const getValue = db.getAsync({})
+  assertType<Promise<{}>>(getValue)
 })

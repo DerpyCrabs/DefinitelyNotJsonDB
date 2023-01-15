@@ -13,6 +13,9 @@ test('works with memory storage', () => {
     return state.test
   })
   expect(typeof res2).toBe('object')
+
+  const res3 = db.get({ test: 'field2' })
+  expect(typeof res3).toBe('object')
 })
 
 test('works with file storage', async () => {

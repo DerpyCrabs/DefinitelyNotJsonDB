@@ -47,8 +47,10 @@ test('logOutputFn is called on every hook', async () => {
   await db.transactAsync({})(async () => {})
   db.exportState()
   await db.exportStateAsync()
+  db.get({})
+  await db.getAsync({})
 
-  expect(logOutputFnSpy).toHaveBeenCalledTimes(10)
+  expect(logOutputFnSpy).toHaveBeenCalledTimes(12)
 })
 
 test('logOutputFn logBeforeAction = false disables before* hooks', async () => {
@@ -126,6 +128,7 @@ test('logMigrate, logTransact, logExportState = false disable logging of these m
         logTransact: false,
         logMigrate: false,
         logExportState: false,
+        logGet: false,
       }),
     }
   )
@@ -135,6 +138,8 @@ test('logMigrate, logTransact, logExportState = false disable logging of these m
   await db.transactAsync({})(async () => {})
   db.exportState()
   await db.exportStateAsync()
+  db.get({})
+  await db.getAsync({})
 
   expect(logOutputFnSpy).toHaveBeenCalledTimes(0)
 })

@@ -37,6 +37,7 @@ type LogOutputFnData<Schema> = {
 type LoggingMiddlewareOptions<Schema> = {
   logMigrate?: boolean
   logTransact?: boolean
+  logGet?: boolean
   logExportState?: boolean
   logOutputFn: (data: LogOutputFnData<Schema>) => void
   logBeforeAction?: boolean
@@ -47,6 +48,7 @@ type LoggingMiddlewareOptions<Schema> = {
 export default function loggingMiddleware<Schema>({
   logMigrate = true,
   logTransact = true,
+  logGet = true,
   logExportState = true,
   logOutputFn,
   logBeforeAction = false,
@@ -188,5 +190,6 @@ export default function loggingMiddleware<Schema>({
       ? { afterTransact: middleware.afterTransact, afterTransactAsync: middleware.afterTransactAsync }
       : {}),
     ...(logExportState ? { exportState: middleware.exportState, exportStateAsync: middleware.exportStateAsync } : {}),
+    ...(logGet ? { get: middleware.get, getAsync: middleware.getAsync } : {}),
   }
 }
