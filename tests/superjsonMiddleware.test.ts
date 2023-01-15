@@ -31,12 +31,12 @@ test('works with file storage', async () => {
   expect(typeof res2).toBe('object')
 })
 
-test(`doesn't set getSnapshot/getSnapshotAsync hooks to not break backups`, () => {
+test(`doesn't set exportState/exportStateAsync hooks to not break backups`, () => {
   const db = new JsonDB({ field: 5, field2: new Date() }, { middleware: [superjsonMiddleware()] })
   db.transact({ field: 'field' })(state => {
     state.field = 10
   })
-  const backup = JSON.parse(JSON.stringify(db.getSnapshot()))
+  const backup = JSON.parse(JSON.stringify(db.exportState()))
 
   const restoredDb = new JsonDB(backup, { middleware: [superjsonMiddleware()] })
   restoredDb.transact({ field: 'field', field2: 'field2' })(state => {

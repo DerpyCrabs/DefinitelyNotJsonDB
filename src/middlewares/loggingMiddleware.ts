@@ -30,14 +30,14 @@ type LogOutputFnData<Schema> = {
       stateAfter: Schema
     }
   | {
-      hook: 'getSnapshot' | 'getSnapshotAsync'
+      hook: 'exportState' | 'exportStateAsync'
     }
 )
 
 type LoggingMiddlewareOptions<Schema> = {
   logMigrate?: boolean
   logTransact?: boolean
-  logGetSnapshot?: boolean
+  logExportState?: boolean
   logOutputFn: (data: LogOutputFnData<Schema>) => void
   logBeforeAction?: boolean
   diff?: boolean
@@ -47,7 +47,7 @@ type LoggingMiddlewareOptions<Schema> = {
 export default function loggingMiddleware<Schema>({
   logMigrate = true,
   logTransact = true,
-  logGetSnapshot = true,
+  logExportState = true,
   logOutputFn,
   logBeforeAction = false,
   diff = true,
@@ -61,12 +61,12 @@ export default function loggingMiddleware<Schema>({
     }
   }
   const middleware: Required<JsonDBMiddleware<Schema>> = {
-    getSnapshot: ({ stateBefore }) => {
-      logOutputFn({ stateBefore, message: 'getSnapshot was called', hook: 'getSnapshot' })
+    exportState: ({ stateBefore }) => {
+      logOutputFn({ stateBefore, message: 'exportState was called', hook: 'exportState' })
       return stateBefore
     },
-    getSnapshotAsync: async ({ stateBefore }) => {
-      logOutputFn({ stateBefore, message: 'getSnapshotAsync was called', hook: 'getSnapshotAsync' })
+    exportStateAsync: async ({ stateBefore }) => {
+      logOutputFn({ stateBefore, message: 'exportStateAsync was called', hook: 'exportStateAsync' })
       return stateBefore
     },
     beforeMigrate: ({ stateBefore, migrationId, migrationTitle }) => {
@@ -187,6 +187,6 @@ export default function loggingMiddleware<Schema>({
     ...(logTransact
       ? { afterTransact: middleware.afterTransact, afterTransactAsync: middleware.afterTransactAsync }
       : {}),
-    ...(logGetSnapshot ? { getSnapshot: middleware.getSnapshot, getSnapshotAsync: middleware.getSnapshotAsync } : {}),
+    ...(logExportState ? { exportState: middleware.exportState, exportStateAsync: middleware.exportStateAsync } : {}),
   }
 }

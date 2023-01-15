@@ -10,8 +10,8 @@ test('migrations are persisted', () => {
       field2: state.field.toString(),
     })
   )
-  expect(db.getSnapshot()).toMatchObject({ field2: '5' })
-  expect(db.getSnapshot().__migrationHistory.length).toBe(1)
+  expect(db.exportState()).toMatchObject({ field2: '5' })
+  expect(db.exportState().__migrationHistory.length).toBe(1)
   const fileContents = JSON.parse(readFileSync(filePath, { encoding: 'utf-8' }))
   expect(fileContents).toMatchObject({ field2: '5' })
   expect(fileContents.__migrationHistory.length).toBe(1)

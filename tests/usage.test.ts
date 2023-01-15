@@ -1,29 +1,29 @@
 import JsonDB from '../src'
 
-test('getSnapshot returns currentState', () => {
+test('exportState returns currentState', () => {
   const db = new JsonDB({ field: 5 })
   db.transact({ test: 'field' })(state => {
     state.test = 10
   })
-  expect(db.getSnapshot()).toStrictEqual({ field: 10 })
+  expect(db.exportState()).toStrictEqual({ field: 10 })
   db.transact({ test: 'field' })(state => {
     state.test = 15
   })
-  assertType<{ field: number }>(db.getSnapshot())
-  expect(db.getSnapshot()).toStrictEqual({ field: 15 })
+  assertType<{ field: number }>(db.exportState())
+  expect(db.exportState()).toStrictEqual({ field: 15 })
 })
 
-test('getSnapshot async returns currentState', async () => {
+test('exportState async returns currentState', async () => {
   const db = new JsonDB({ field: 5 })
   await db.transactAsync({ test: 'field' })(async state => {
     state.test = 10
   })
-  expect(await db.getSnapshotAsync()).toStrictEqual({ field: 10 })
+  expect(await db.exportStateAsync()).toStrictEqual({ field: 10 })
   db.transact({ test: 'field' })(state => {
     state.test = 15
   })
-  assertType<Promise<{ field: number }>>(db.getSnapshotAsync())
-  expect(await db.getSnapshotAsync()).toStrictEqual({ field: 15 })
+  assertType<Promise<{ field: number }>>(db.exportStateAsync())
+  expect(await db.exportStateAsync()).toStrictEqual({ field: 15 })
 })
 
 test("async transactions don't override each other", async () => {
@@ -41,7 +41,7 @@ test("async transactions don't override each other", async () => {
       setTimeout(() => r({}), 100)
     })
   })
-  expect(await db.getSnapshotAsync()).toStrictEqual({ field: 8 })
+  expect(await db.exportStateAsync()).toStrictEqual({ field: 8 })
 })
 
 test('transact path argument supports nested fields', async () => {
@@ -91,7 +91,7 @@ test('transact can set array members', async () => {
     state.test2 = { n: 3 }
     state.test3 = { n: 4 }
   })
-  expect(db.getSnapshot()).toStrictEqual({
+  expect(db.exportState()).toStrictEqual({
     field: 5,
     field2: 's',
     field3: { test: 't', test2: [{ n: 2 }, { n: 3 }, { n: 4 }] },
@@ -104,7 +104,7 @@ test('async methods return Promise', async () => {
     return 5
   })
   assertType<Promise<number>>(value)
-  const snapshot = db.getSnapshotAsync()
+  const snapshot = db.exportStateAsync()
   assertType<Promise<{ field: number }>>(snapshot)
 })
 

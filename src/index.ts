@@ -17,7 +17,7 @@ export type AsyncJsonDBMiddleware<Schema> = {
     migrationId: number
   }) => Promise<any>
   getAsync?: (data: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
-  getSnapshotAsync?: (data: { stateBefore: Schema }) => Promise<Schema>
+  exportStateAsync?: (data: { stateBefore: Schema }) => Promise<Schema>
 }
 
 export type JsonDBMiddleware<Schema> = {
@@ -26,7 +26,7 @@ export type JsonDBMiddleware<Schema> = {
   beforeMigrate?: (data: { stateBefore: any; migrationTitle: string; migrationId: number }) => any
   afterMigrate?: (data: { stateBefore: any; stateAfter: any; migrationTitle: string; migrationId: number }) => any
   get?: (data: { paths: Paths; stateBefore: Schema }) => Schema
-  getSnapshot?: (data: { stateBefore: Schema }) => Schema
+  exportState?: (data: { stateBefore: Schema }) => Schema
 } & AsyncJsonDBMiddleware<Schema>
 
 export class JsonDB<
@@ -54,22 +54,22 @@ export class JsonDB<
     setAutoFreeze(false) // disable freezing output of immer's `produce`
   }
 
-  public getSnapshot: IsAsyncOnly extends true ? never : () => Schema = (() => {
-    if (this.isAsyncOnly) throw new Error('getSnapshot is not available with isAsyncOnly = true')
-    let result = this.currentState
+  public exportState: IsAsyncOnly extends true ? never : () => Schema = (() => {
+    if (this.isAsyncOnly) throw new Error('exportState is not available with isAsyncOnly = true')
+    let result = cloneState(this.currentState)
     for (const m of this.middlewares) {
-      if (m.getSnapshot) {
-        result = m.getSnapshot({ stateBefore: result })
+      if (m.exportState) {
+        result = m.exportState({ stateBefore: result })
       }
     }
     return result
   }) as any
 
-  public async getSnapshotAsync(): Promise<Schema> {
-    let result = this.currentState
+  public async exportStateAsync(): Promise<Schema> {
+    let result = cloneState(this.currentState)
     for (const m of this.middlewares) {
-      if (m.getSnapshotAsync) {
-        result = await m.getSnapshotAsync({ stateBefore: result })
+      if (m.exportStateAsync) {
+        result = await m.exportStateAsync({ stateBefore: result })
       }
     }
     return result

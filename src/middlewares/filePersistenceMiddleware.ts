@@ -49,7 +49,7 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
     afterMigrateAsync: afterFnAsync,
     get: beforeFn,
     getAsync: beforeFnAsync,
-    getSnapshot: beforeFn,
-    getSnapshotAsync: beforeFnAsync,
+    exportState: beforeFn,
+    exportStateAsync: beforeFnAsync,
   }
 }

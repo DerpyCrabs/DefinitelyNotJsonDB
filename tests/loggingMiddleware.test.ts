@@ -45,8 +45,8 @@ test('logOutputFn is called on every hook', async () => {
     .migrateAsync('async migration', async state => state)
   db.transact({})(() => {})
   await db.transactAsync({})(async () => {})
-  db.getSnapshot()
-  await db.getSnapshotAsync()
+  db.exportState()
+  await db.exportStateAsync()
 
   expect(logOutputFnSpy).toHaveBeenCalledTimes(10)
 })
@@ -66,8 +66,8 @@ test('logOutputFn logBeforeAction = false disables before* hooks', async () => {
     .migrateAsync('async migration', async state => state)
   db.transact({})(() => {})
   await db.transactAsync({})(async () => {})
-  db.getSnapshot()
-  await db.getSnapshotAsync()
+  db.exportState()
+  await db.exportStateAsync()
 
   expect(logOutputFnSpy).toHaveBeenCalledTimes(6) // without beforeMigrate, beforeMigrateAsync, beforeTransact, beforeTransactAsync
 })
@@ -116,7 +116,7 @@ test('diff = false disables diff printing', () => {
   )
 })
 
-test('logMigrate, logTransact, logGetSnapshot = false disable logging of these methods', async () => {
+test('logMigrate, logTransact, logExportState = false disable logging of these methods', async () => {
   const logOutputFnSpy = vi.fn()
   const db = await new JsonDB(
     { field: 5 },
@@ -125,7 +125,7 @@ test('logMigrate, logTransact, logGetSnapshot = false disable logging of these m
         logOutputFn: logOutputFnSpy,
         logTransact: false,
         logMigrate: false,
-        logGetSnapshot: false,
+        logExportState: false,
       }),
     }
   )
@@ -133,8 +133,8 @@ test('logMigrate, logTransact, logGetSnapshot = false disable logging of these m
     .migrateAsync('async migration', async state => state)
   db.transact({})(() => {})
   await db.transactAsync({})(async () => {})
-  db.getSnapshot()
-  await db.getSnapshotAsync()
+  db.exportState()
+  await db.exportStateAsync()
 
   expect(logOutputFnSpy).toHaveBeenCalledTimes(0)
 })
