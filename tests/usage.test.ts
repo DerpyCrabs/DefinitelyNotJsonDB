@@ -19,7 +19,7 @@ test('exportState async returns currentState', async () => {
     state.test = 10
   })
   expect(await db.exportStateAsync()).toStrictEqual({ field: 10 })
-  db.transact({ test: ['field'] })(state => {
+  db.transact({ test: ['field'] } as const)(state => {
     state.test = 15
   })
   assertType<Promise<{ field: number }>>(db.exportStateAsync())
@@ -152,4 +152,11 @@ test('supports Record in schema', () => {
   const value2 = db.get({ test: ['field', 3] } as const).test
   assertType<string>(value2)
   expect(value2).toBe('test')
+})
+
+test('supports non const path parts', () => {
+  const db = new JsonDB<{ field: Record<number, string> }>({ field: { 3: 'test' } })
+  const value = db.get({ test: ['field', 3 as number] } as const).test
+  assertType<string>(value)
+  expect(value).toBe('test')
 })
