@@ -1,32 +1,45 @@
 import filePersistenceMiddleware from './middlewares/filePersistenceMiddleware'
 import superjsonMiddleware from './middlewares/superjsonMiddleware'
 import loggingMiddleware from './middlewares/loggingMiddleware'
-import { A, O, B, S } from 'ts-toolbelt'
+import { A, O, B } from 'ts-toolbelt'
 import produce, { setAutoFreeze } from 'immer'
 import superjson from 'superjson'
 
 // transaction hooks run before and after corresponding methods and allow to change db state at this point
 export type AsyncJsonDBMiddleware<Schema> = {
-  beforeTransactAsync?: (data: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
-  afterTransactAsync?: (data: { paths: Paths; stateBefore: Schema; stateAfter: Schema }) => Promise<Schema>
-  beforeMigrateAsync?: (data: { stateBefore: any; migrationTitle: string; migrationId: number }) => Promise<any>
-  afterMigrateAsync?: (data: {
-    stateBefore: any
-    stateAfter: any
+  beforeTransactAsync?: (data: { paths: Paths; stateBefore: Readonly<Schema> }) => Promise<Schema>
+  afterTransactAsync?: (data: {
+    paths: Paths
+    stateBefore: Readonly<Schema>
+    stateAfter: Readonly<Schema>
+  }) => Promise<Schema>
+  beforeMigrateAsync?: (data: {
+    stateBefore: Readonly<any>
     migrationTitle: string
     migrationId: number
   }) => Promise<any>
-  getAsync?: (data: { paths: Paths; stateBefore: Schema }) => Promise<Schema>
-  exportStateAsync?: (data: { stateBefore: Schema }) => Promise<Schema>
+  afterMigrateAsync?: (data: {
+    stateBefore: Readonly<any>
+    stateAfter: Readonly<any>
+    migrationTitle: string
+    migrationId: number
+  }) => Promise<any>
+  getAsync?: (data: { paths: Paths; stateBefore: Readonly<Schema> }) => Promise<Schema>
+  exportStateAsync?: (data: { stateBefore: Readonly<Schema> }) => Promise<Schema>
 }
 
 export type JsonDBMiddleware<Schema> = {
-  beforeTransact?: (data: { paths: Paths; stateBefore: Schema }) => Schema
-  afterTransact?: (data: { paths: Paths; stateBefore: Schema; stateAfter: Schema }) => Schema
-  beforeMigrate?: (data: { stateBefore: any; migrationTitle: string; migrationId: number }) => any
-  afterMigrate?: (data: { stateBefore: any; stateAfter: any; migrationTitle: string; migrationId: number }) => any
-  get?: (data: { paths: Paths; stateBefore: Schema }) => Schema
-  exportState?: (data: { stateBefore: Schema }) => Schema
+  beforeTransact?: (data: { paths: Paths; stateBefore: Readonly<Schema> }) => Schema
+  afterTransact?: (data: { paths: Paths; stateBefore: Readonly<Schema>; stateAfter: Readonly<Schema> }) => Schema
+  beforeMigrate?: (data: { stateBefore: Readonly<any>; migrationTitle: string; migrationId: number }) => any
+  afterMigrate?: (data: {
+    stateBefore: Readonly<any>
+    stateAfter: Readonly<any>
+    migrationTitle: string
+    migrationId: number
+  }) => any
+  get?: (data: { paths: Paths; stateBefore: Readonly<Schema> }) => Schema
+  exportState?: (data: { stateBefore: Readonly<Schema> }) => Schema
 } & AsyncJsonDBMiddleware<Schema>
 
 export class JsonDB<
@@ -80,7 +93,7 @@ export class JsonDB<
     ? never
     : <Output extends object>(
         title: string,
-        apply: (i: Schema) => Output
+        apply: (i: Readonly<Schema>) => Output
       ) => JsonDB<Output & { __migrationHistory: { id: number; createdAt: string; title: string }[] }> = ((
     title: string,
     apply: (i: any) => any
@@ -148,7 +161,7 @@ export class JsonDB<
 
   public async migrateAsync<Output extends object>(
     title: string,
-    apply: (i: Schema) => Promise<Output>
+    apply: (i: Readonly<Schema>) => Promise<Output>
   ): Promise<JsonDB<Output & { __migrationHistory: { id: number; createdAt: string; title: string }[] }>> {
     this.currentMigrationId = this.currentMigrationId ? this.currentMigrationId + 1 : 1
 
@@ -216,13 +229,13 @@ export class JsonDB<
     ? never
     : <K extends Paths>(paths: {
         [key in keyof K]: B.Or<
-          A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
-          A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
+          A.Equals<O.Path<Schema, K[key]>, never>,
+          A.Equals<O.Path<Schema, K[key]>, undefined>
         > extends 1
           ? never
           : K[key]
       }) => {
-        [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
+        -readonly [key in keyof K]: O.Path<Schema, K[key]>
       } = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('get is not available with isAsyncOnly = true')
 
@@ -241,13 +254,13 @@ export class JsonDB<
 
   public getAsync: <K extends Paths>(paths: {
     [key in keyof K]: B.Or<
-      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
-      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
+      A.Equals<O.Path<Schema, K[key]>, never>,
+      A.Equals<O.Path<Schema, K[key]>, undefined>
     > extends 1
       ? never
       : K[key]
   }) => Promise<{
-    [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
+    -readonly [key in keyof K]: O.Path<Schema, K[key]>
   }> = (async (paths: any) => {
     let state = cloneState(this.currentState)
 
@@ -268,14 +281,14 @@ export class JsonDB<
     ? never
     : <K extends Paths>(paths: {
         [key in keyof K]: B.Or<
-          A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
-          A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
+          A.Equals<O.Path<Schema, K[key]>, never>,
+          A.Equals<O.Path<Schema, K[key]>, undefined>
         > extends 1
           ? never
           : K[key]
       }) => <Result>(
         f: (state: {
-          [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
+          -readonly [key in keyof K]: O.Path<Schema, K[key]>
         }) => Result
       ) => Result = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
@@ -298,14 +311,14 @@ export class JsonDB<
 
   public transactAsync: <K extends Paths>(paths: {
     [key in keyof K]: B.Or<
-      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, never>,
-      A.Equals<O.Path<Schema, S.Split<K[key], '.'>>, undefined>
+      A.Equals<O.Path<Schema, K[key]>, never>,
+      A.Equals<O.Path<Schema, K[key]>, undefined>
     > extends 1
       ? never
       : K[key]
   }) => <Result>(
     f: (state: {
-      [key in keyof K]: O.Path<Schema, S.Split<K[key], '.'>>
+      -readonly [key in keyof K]: O.Path<Schema, K[key]>
     }) => Promise<Result>
   ) => Promise<Result> = paths => {
     return async action => {
@@ -407,10 +420,10 @@ export class JsonDB<
   }
 }
 
-type Paths = { [key: string]: string }
+export type Paths = { [key: string]: readonly [string | number, ...(string | number)[]] }
 
 // get field value in `state` following `path`
-function getViewFromPath(state: any, path: (string | number)[]): any {
+function getViewFromPath(state: any, path: readonly (string | number)[]): any {
   let fieldPointer = state
   for (let i = 0; i < path.length; i++) {
     const field = path[i]
@@ -423,28 +436,21 @@ function getViewFromPath(state: any, path: (string | number)[]): any {
 
 // get field values in `state` following `paths` values
 function actionStateFromPaths(state: any, paths: Paths): any {
-  return Object.fromEntries(
-    Object.entries(paths).map(([fieldName, path]) => [fieldName, getViewFromPath(state, splitPath(path))])
-  )
+  return Object.fromEntries(Object.entries(paths).map(([fieldName, path]) => [fieldName, getViewFromPath(state, path)]))
 }
 
 // set `currentState` fields from `actionState` following `paths` values
 function setStateFromActionState(paths: Paths, actionState: { [key: string]: any }, currentState: any) {
   Object.entries(paths).forEach(([fieldName, path]) => {
     let fieldPointer = currentState
-    const pathFields = splitPath(path)
-    for (let i = 0; i < pathFields.length - 1; i++) {
-      const field = pathFields[i]
+    for (let i = 0; i < path.length - 1; i++) {
+      const field = path[i]
       if (fieldPointer === undefined || fieldPointer === null) break
       fieldPointer = fieldPointer[field]
     }
     if (fieldPointer !== undefined && fieldPointer !== null)
-      fieldPointer[pathFields[pathFields.length - 1]] = actionState[fieldName]
+      fieldPointer[path[path.length - 1]] = actionState[fieldName]
   })
-}
-
-function splitPath(path: string): (number | string)[] {
-  return path.split('.').map(p => (/^\d+$/.test(p) ? Number.parseInt(p, 10) : p))
 }
 
 function cloneState<Schema>(state: Schema): Schema {

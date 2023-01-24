@@ -1,4 +1,4 @@
-import { JsonDBMiddleware } from '..'
+import { JsonDBMiddleware, Paths } from '..'
 import { diffString } from 'json-diff'
 
 type LogOutputFnData<Schema> = {
@@ -7,15 +7,15 @@ type LogOutputFnData<Schema> = {
 } & (
   | {
       hook: 'beforeTransact' | 'beforeTransactAsync'
-      paths: { [key: string]: string }
+      paths: Paths
     }
   | {
       hook: 'get' | 'getAsync'
-      paths: { [key: string]: string }
+      paths: Paths
     }
   | {
       hook: 'afterTransact' | 'afterTransactAsync'
-      paths: { [key: string]: string }
+      paths: Paths
       stateAfter: Schema
     }
   | {

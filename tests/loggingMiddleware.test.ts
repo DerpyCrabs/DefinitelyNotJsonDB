@@ -12,7 +12,7 @@ test('calling methods of db calls logOutputFn', () => {
       }),
     }
   )
-  db.transact({ test: 'field' })(state => {
+  db.transact({ test: ['field'] } as const)(state => {
     state.test = 10
   })
   expect(logOutputFnSpy).toHaveBeenCalledTimes(1)
@@ -20,7 +20,7 @@ test('calling methods of db calls logOutputFn', () => {
     expect.objectContaining({
       stateBefore: { field: 5 },
       stateAfter: { field: 10 },
-      message: `afterTransact: {"test":"field"}
+      message: `afterTransact: {"test":["field"]}
  {
 -  field: 5
 +  field: 10
@@ -85,7 +85,7 @@ test('logOutputFn in afterTransact receives correct stateBefore', async () => {
     }
   )
 
-  db.transact({ test: 'field' })(state => {
+  db.transact({ test: ['field'] } as const)(state => {
     state.test = 10
   })
 
@@ -105,7 +105,7 @@ test('diff = false disables diff printing', () => {
       }),
     }
   )
-  db.transact({ test: 'field' })(state => {
+  db.transact({ test: ['field'] } as const)(state => {
     state.test = 10
   })
   expect(logOutputFnSpy).toHaveBeenCalledTimes(1)
@@ -113,7 +113,7 @@ test('diff = false disables diff printing', () => {
     expect.objectContaining({
       stateBefore: { field: 5 },
       stateAfter: { field: 10 },
-      message: `afterTransact: {"test":"field"}`,
+      message: `afterTransact: {"test":["field"]}`,
     })
   )
 })

@@ -3,7 +3,7 @@ import JsonDB from '../src'
 
 bench('getting nested fields', () => {
   const db = new JsonDB({ nestedSchema: { stringField: 'nested' } })
-  const res = db.transact({ test: 'nestedSchema.stringField' })(state => {
+  const res = db.transact({ test: ['nestedSchema', 'stringField'] } as const)(state => {
     return state.test
   })
   expect(res).toBe('nested')
