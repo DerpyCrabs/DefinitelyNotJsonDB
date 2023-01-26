@@ -265,10 +265,14 @@ export class JsonDB<
     ? never
     : <Ps extends Paths>(
         paths: SchemaPaths<Schema, Ps>
-      ) => <Result>(f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Result) => Result = ((paths: any) => {
+      ) => <Result>(
+        f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Result,
+        options?: { onCommit?: (r: Result) => void; onRollback?: () => void; retries?: number }
+      ) => Result = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
 
-    return (action: any) => {
+    return (action: any, options: { onCommit?: (r: any) => void; onRollback?: () => void; retries?: number }) => {
+      let retries = 0
       for (;;) {
         const initialState = this.currentState
 
@@ -276,9 +280,19 @@ export class JsonDB<
 
         // rerun the transaction if some other transaction was applied to state while current transaction was executing
         if (initialState !== this.currentState) {
+          if (options?.onRollback) {
+            options.onRollback()
+          }
+          if (options?.retries && retries >= options?.retries) {
+            throw new Error(`Exceeded transaction retries limit`)
+          }
+          retries += 1
           continue
         }
         this.currentState = state
+        if (options?.onCommit) {
+          options.onCommit(result)
+        }
         return result
       }
     }
@@ -286,8 +300,12 @@ export class JsonDB<
 
   public transactAsync: <Ps extends Paths>(
     paths: SchemaPaths<Schema, Ps>
-  ) => <Result>(f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Promise<Result>) => Promise<Result> = paths => {
-    return async action => {
+  ) => <Result>(
+    f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Promise<Result>,
+    options?: { onCommit?: (r: Result) => Promise<void>; onRollback?: () => Promise<void>; retries?: number }
+  ) => Promise<Result> = paths => {
+    return async (action, options) => {
+      let retries = 0
       for (;;) {
         const initialState = this.currentState
 
@@ -295,9 +313,19 @@ export class JsonDB<
 
         // rerun the transaction if some other transaction was applied to state while current transaction was executing
         if (initialState !== this.currentState) {
+          if (options?.onRollback) {
+            await options.onRollback()
+          }
+          if (options?.retries && retries >= options?.retries) {
+            throw new Error(`Exceeded transaction retries limit`)
+          }
+          retries += 1
           continue
         }
         this.currentState = state
+        if (options?.onCommit) {
+          await options.onCommit(result)
+        }
         return result
       }
     }
