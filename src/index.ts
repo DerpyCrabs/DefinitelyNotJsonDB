@@ -227,11 +227,7 @@ export class JsonDB<
 
   public get: IsAsyncOnly extends true
     ? never
-    : <Ps extends Paths>(
-        paths: SchemaPaths<Schema, Ps>
-      ) => {
-        [key in keyof Ps]: O.Path<Schema, Ps[key]>
-      } = ((paths: any) => {
+    : <Ps extends Paths>(paths: SchemaPaths<Schema, Ps>) => StateFromPaths<Schema, Ps> = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('get is not available with isAsyncOnly = true')
 
     let state = cloneState(this.currentState)
@@ -247,11 +243,9 @@ export class JsonDB<
     return actionStateFromPaths(state, paths)
   }) as any
 
-  public getAsync: <Ps extends Paths>(
-    paths: SchemaPaths<Schema, Ps>
-  ) => Promise<{
-    [key in keyof Ps]: O.Path<Schema, Ps[key]>
-  }> = (async (paths: any) => {
+  public getAsync: <Ps extends Paths>(paths: SchemaPaths<Schema, Ps>) => Promise<StateFromPaths<Schema, Ps>> = (async (
+    paths: any
+  ) => {
     let state = cloneState(this.currentState)
 
     for (let index = 0; index < this.middlewares.length; index++) {
@@ -271,11 +265,7 @@ export class JsonDB<
     ? never
     : <Ps extends Paths>(
         paths: SchemaPaths<Schema, Ps>
-      ) => <Result>(
-        f: (state: {
-          -readonly [key in keyof Ps]: O.Path<Schema, Ps[key]>
-        }) => Result
-      ) => Result = ((paths: any) => {
+      ) => <Result>(f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Result) => Result = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
 
     return (action: any) => {
@@ -296,11 +286,7 @@ export class JsonDB<
 
   public transactAsync: <Ps extends Paths>(
     paths: SchemaPaths<Schema, Ps>
-  ) => <Result>(
-    f: (state: {
-      -readonly [key in keyof Ps]: O.Path<Schema, Ps[key]>
-    }) => Promise<Result>
-  ) => Promise<Result> = paths => {
+  ) => <Result>(f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Promise<Result>) => Promise<Result> = paths => {
     return async action => {
       for (;;) {
         const initialState = this.currentState
@@ -409,6 +395,10 @@ type SchemaPaths<Schema extends object, Ps extends Paths> = {
   > extends 1
     ? never
     : Ps[key]
+}
+
+type StateFromPaths<Schema extends object, Ps extends Paths> = {
+  [key in keyof Ps]: O.Path<Schema, Ps[key]>
 }
 
 // get field value in `state` following `path`
