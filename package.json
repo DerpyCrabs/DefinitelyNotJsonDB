@@ -20,19 +20,19 @@
   "license": "MIT",
   "devDependencies": {
     "@types/json-diff": "^0.9.1",
-    "@types/node": "^18.11.9",
-    "@vitest/coverage-c8": "^0.27.1",
+    "@types/node": "^18.11.18",
+    "@vitest/coverage-c8": "^0.28.2",
     "c8": "^7.12.0",
-    "typescript": "^4.9.3",
-    "vite": "^3.2.4",
+    "typescript": "^4.9.4",
+    "vite": "^4.0.4",
     "vite-plugin-dts": "^1.7.1",
-    "vitest": "^0.25.2"
+    "vitest": "^0.28.2"
   },
   "sideEffects": false,
   "dependencies": {
-    "immer": "^9.0.16",
+    "immer": "^9.0.18",
     "json-diff": "^1.0.0",
-    "superjson": "^1.12.1",
+    "superjson": "^1.12.2",
     "ts-toolbelt": "^9.6.0"
   }
 }
