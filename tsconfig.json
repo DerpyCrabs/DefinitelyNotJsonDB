@@ -12,7 +12,6 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "importHelpers": true,
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,
