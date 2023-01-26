@@ -227,15 +227,10 @@ export class JsonDB<
 
   public get: IsAsyncOnly extends true
     ? never
-    : <K extends Paths>(paths: {
-        [key in keyof K]: B.Or<
-          A.Equals<O.Path<Schema, K[key]>, never>,
-          A.Equals<O.Path<Schema, K[key]>, undefined>
-        > extends 1
-          ? never
-          : K[key]
-      }) => {
-        -readonly [key in keyof K]: O.Path<Schema, K[key]>
+    : <Ps extends Paths>(
+        paths: SchemaPaths<Schema, Ps>
+      ) => {
+        [key in keyof Ps]: O.Path<Schema, Ps[key]>
       } = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('get is not available with isAsyncOnly = true')
 
@@ -252,15 +247,10 @@ export class JsonDB<
     return actionStateFromPaths(state, paths)
   }) as any
 
-  public getAsync: <K extends Paths>(paths: {
-    [key in keyof K]: B.Or<
-      A.Equals<O.Path<Schema, K[key]>, never>,
-      A.Equals<O.Path<Schema, K[key]>, undefined>
-    > extends 1
-      ? never
-      : K[key]
-  }) => Promise<{
-    -readonly [key in keyof K]: O.Path<Schema, K[key]>
+  public getAsync: <Ps extends Paths>(
+    paths: SchemaPaths<Schema, Ps>
+  ) => Promise<{
+    [key in keyof Ps]: O.Path<Schema, Ps[key]>
   }> = (async (paths: any) => {
     let state = cloneState(this.currentState)
 
@@ -279,16 +269,11 @@ export class JsonDB<
   // immer is used to allow mutation of values from state in action
   public transact: IsAsyncOnly extends true
     ? never
-    : <K extends Paths>(paths: {
-        [key in keyof K]: B.Or<
-          A.Equals<O.Path<Schema, K[key]>, never>,
-          A.Equals<O.Path<Schema, K[key]>, undefined>
-        > extends 1
-          ? never
-          : K[key]
-      }) => <Result>(
+    : <Ps extends Paths>(
+        paths: SchemaPaths<Schema, Ps>
+      ) => <Result>(
         f: (state: {
-          -readonly [key in keyof K]: O.Path<Schema, K[key]>
+          -readonly [key in keyof Ps]: O.Path<Schema, Ps[key]>
         }) => Result
       ) => Result = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('transact is not available with isAsyncOnly = true')
@@ -309,16 +294,11 @@ export class JsonDB<
     }
   }) as any
 
-  public transactAsync: <K extends Paths>(paths: {
-    [key in keyof K]: B.Or<
-      A.Equals<O.Path<Schema, K[key]>, never>,
-      A.Equals<O.Path<Schema, K[key]>, undefined>
-    > extends 1
-      ? never
-      : K[key]
-  }) => <Result>(
+  public transactAsync: <Ps extends Paths>(
+    paths: SchemaPaths<Schema, Ps>
+  ) => <Result>(
     f: (state: {
-      -readonly [key in keyof K]: O.Path<Schema, K[key]>
+      -readonly [key in keyof Ps]: O.Path<Schema, Ps[key]>
     }) => Promise<Result>
   ) => Promise<Result> = paths => {
     return async action => {
@@ -421,6 +401,15 @@ export class JsonDB<
 }
 
 export type Paths = { [key: string]: readonly [string | number, ...(string | number)[]] }
+
+type SchemaPaths<Schema extends object, Ps extends Paths> = {
+  [key in keyof Ps]: B.Or<
+    A.Equals<O.Path<Schema, Ps[key]>, never>,
+    A.Equals<O.Path<Schema, Ps[key]>, undefined>
+  > extends 1
+    ? never
+    : Ps[key]
+}
 
 // get field value in `state` following `path`
 function getViewFromPath(state: any, path: readonly (string | number)[]): any {
