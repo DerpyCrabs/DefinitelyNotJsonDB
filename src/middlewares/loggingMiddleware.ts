@@ -136,7 +136,7 @@ export default function loggingMiddleware<Schema>({
         message: `afterMigrate: ${migrationId} - ${migrationTitle}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterMigrate',
       })
-      return stateBefore
+      return stateAfter
     },
     afterMigrateAsync: async ({ stateBefore, stateAfter, migrationId, migrationTitle }) => {
       logOutputFn({
@@ -147,7 +147,7 @@ export default function loggingMiddleware<Schema>({
         message: `afterMigrateAsync: ${migrationId} - ${migrationTitle}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterMigrateAsync',
       })
-      return stateBefore
+      return stateAfter
     },
     afterTransact: ({ stateBefore, stateAfter, paths }) => {
       logOutputFn({
@@ -157,7 +157,7 @@ export default function loggingMiddleware<Schema>({
         message: `afterTransact: ${JSON.stringify(paths)}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterTransact',
       })
-      return stateBefore
+      return stateAfter
     },
     afterTransactAsync: async ({ stateBefore, stateAfter, paths }) => {
       logOutputFn({
@@ -167,7 +167,7 @@ export default function loggingMiddleware<Schema>({
         message: `afterTransactAsync: ${JSON.stringify(paths)}${printDiff(stateBefore, stateAfter)}`,
         hook: 'afterTransactAsync',
       })
-      return stateBefore
+      return stateAfter
     },
   }
 
