@@ -1,10 +1,7 @@
 import type { JsonDBMiddleware } from '..'
 import fs from 'fs'
 
-export default function filePersistenceMiddleware<Schema>(
-  filePath: string,
-  strictWrites: boolean = true
-): JsonDBMiddleware<Schema> {
+export default function filePersistenceMiddleware<Schema>(filePath: string): JsonDBMiddleware<Schema> {
   let hasReadDataFromDisk = false
   let asyncWriteQueue: any[] = []
   let asyncWriterHandle: null | NodeJS.Timeout = null
@@ -49,23 +46,17 @@ export default function filePersistenceMiddleware<Schema>(
   }
 
   const afterFnAsync = async ({ stateAfter }: any) => {
-    if (strictWrites) {
-      await fs.promises.writeFile(filePath, JSON.stringify(stateAfter), {
-        encoding: 'utf-8',
-      })
-    } else {
-      asyncWriteQueue.push(stateAfter)
-      if (!asyncWriterHandle) {
-        asyncWriterHandle = setTimeout(async () => {
-          if (asyncWriteQueue.length !== 0) {
-            await fs.promises.writeFile(filePath, JSON.stringify(asyncWriteQueue[asyncWriteQueue.length - 1]), {
-              encoding: 'utf-8',
-            })
-          }
-          asyncWriterHandle = null
-          asyncWriteQueue = []
-        }, 0)
-      }
+    asyncWriteQueue.push(stateAfter)
+    if (!asyncWriterHandle) {
+      asyncWriterHandle = setTimeout(async () => {
+        if (asyncWriteQueue.length !== 0) {
+          await fs.promises.writeFile(filePath, JSON.stringify(asyncWriteQueue[asyncWriteQueue.length - 1]), {
+            encoding: 'utf-8',
+          })
+        }
+        asyncWriterHandle = null
+        asyncWriteQueue = []
+      }, 0)
     }
 
     return stateAfter

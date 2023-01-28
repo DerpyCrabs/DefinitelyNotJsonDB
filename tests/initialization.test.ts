@@ -1,6 +1,6 @@
 import JsonDB from '../src'
 import ExampleSchema from './files/example-db'
-import { existsSync, rmSync } from 'fs'
+import { rm } from 'fs/promises'
 import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddleware'
 
 test('can be initialized with initial data', () => {
@@ -34,5 +34,9 @@ test('can be initialized with initial data and persist option', async () => {
     })
   })
   expect(await res2).toBe(15)
-  if (existsSync('tests/files/example-db2.json')) rmSync('tests/files/example-db2.json')
+  afterEach(async () => {
+    try {
+      await rm('tests/files/example-db2.json')
+    } catch {}
+  })
 })

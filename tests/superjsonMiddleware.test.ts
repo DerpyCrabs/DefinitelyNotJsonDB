@@ -1,5 +1,5 @@
 import JsonDB from '../src'
-import { existsSync, rmSync } from 'fs'
+import { rm } from 'fs/promises'
 import filePersistenceMiddleware from '../src/middlewares/filePersistenceMiddleware'
 import superjsonMiddleware from '../src/middlewares/superjsonMiddleware'
 
@@ -48,6 +48,8 @@ test(`doesn't set exportState/exportStateAsync hooks to not break backups`, () =
   })
 })
 
-afterEach(() => {
-  if (existsSync('tests/files/example-db3.json')) rmSync('tests/files/example-db3.json')
+afterEach(async () => {
+  try {
+    await rm('tests/files/example-db3.json')
+  } catch {}
 })
