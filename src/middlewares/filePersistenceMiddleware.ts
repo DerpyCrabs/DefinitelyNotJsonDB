@@ -61,8 +61,9 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
           r(stateAfter)
         }, 0)
       } else {
-        setInterval(() => {
+        var handle = setInterval(() => {
           if (!asyncWriterHandle) {
+            clearInterval(handle)
             r(stateAfter)
           }
         }, 0.5)
