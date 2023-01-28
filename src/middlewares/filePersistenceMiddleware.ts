@@ -45,21 +45,29 @@ export default function filePersistenceMiddleware<Schema>(filePath: string): Jso
     return stateAfter
   }
 
-  const afterFnAsync = async ({ stateAfter }: any) => {
+  const afterFnAsync = ({ stateAfter }: any): Promise<any> => {
     asyncWriteQueue.push(stateAfter)
-    if (!asyncWriterHandle) {
-      asyncWriterHandle = setTimeout(async () => {
-        if (asyncWriteQueue.length !== 0) {
-          await fs.promises.writeFile(filePath, JSON.stringify(asyncWriteQueue[asyncWriteQueue.length - 1]), {
-            encoding: 'utf-8',
-          })
-        }
-        asyncWriterHandle = null
-        asyncWriteQueue = []
-      }, 0)
-    }
 
-    return stateAfter
+    return new Promise(r => {
+      if (!asyncWriterHandle) {
+        asyncWriterHandle = setTimeout(() => {
+          if (asyncWriteQueue.length !== 0) {
+            fs.writeFileSync(filePath, JSON.stringify(asyncWriteQueue[asyncWriteQueue.length - 1]), {
+              encoding: 'utf-8',
+            })
+          }
+          asyncWriterHandle = null
+          asyncWriteQueue = []
+          r(stateAfter)
+        }, 0)
+      } else {
+        setInterval(() => {
+          if (!asyncWriterHandle) {
+            r(stateAfter)
+          }
+        }, 0.5)
+      }
+    })
   }
 
   return {

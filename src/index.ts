@@ -225,6 +225,7 @@ export class JsonDB<
     return this as any
   }
 
+  // get an object containing values from `this.currentState` followings the paths from `paths` argument
   public get: IsAsyncOnly extends true
     ? never
     : <Ps extends Paths>(paths: SchemaPaths<Schema, Ps>) => StateFromPaths<Schema, Ps> = ((paths: any) => {
@@ -259,7 +260,7 @@ export class JsonDB<
     return actionStateFromPaths(state, paths)
   }) as any
 
-  // transact gets an object where values are paths into this.currentState that will be available to the action
+  // transact gets an object where values are paths into `this.currentState` that will be available to the action
   // immer is used to allow mutation of values from state in action
   public transact: IsAsyncOnly extends true
     ? never
