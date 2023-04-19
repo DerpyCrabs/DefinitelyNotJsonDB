@@ -12,7 +12,7 @@ test('calling methods of db calls logOutputFn', () => {
       }),
     }
   )
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 10
   })
   expect(logOutputFnSpy).toHaveBeenCalledTimes(1)
@@ -85,7 +85,7 @@ test('logOutputFn in afterTransact receives correct stateBefore', async () => {
     }
   )
 
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 10
   })
 
@@ -105,7 +105,7 @@ test('diff = false disables diff printing', () => {
       }),
     }
   )
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 10
   })
   expect(logOutputFnSpy).toHaveBeenCalledTimes(1)

@@ -16,7 +16,7 @@ test('middlewares get correct stateBefore', () => {
       ],
     }
   )
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 10
   })
   expect(afterTransactSpy).toHaveBeenCalledWith(

@@ -2,11 +2,11 @@ import JsonDB from '../src'
 
 test('exportState returns currentState', () => {
   const db = new JsonDB({ field: 5 })
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 10
   })
   expect(db.exportState()).toStrictEqual({ field: 10 })
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 15
   })
   assertType<{ field: number }>(db.exportState())
@@ -15,11 +15,11 @@ test('exportState returns currentState', () => {
 
 test('exportState async returns currentState', async () => {
   const db = new JsonDB({ field: 5 })
-  await db.transactAsync({ test: ['field'] } as const)(async state => {
+  await db.transactAsync({ test: ['field'] })(async state => {
     state.test = 10
   })
   expect(await db.exportStateAsync()).toStrictEqual({ field: 10 })
-  db.transact({ test: ['field'] } as const)(state => {
+  db.transact({ test: ['field'] })(state => {
     state.test = 15
   })
   assertType<Promise<{ field: number }>>(db.exportStateAsync())
@@ -29,13 +29,13 @@ test('exportState async returns currentState', async () => {
 test("async transactions don't override each other", async () => {
   const db = new JsonDB({ field: 5 })
 
-  db.transactAsync({ test: ['field'] } as const)(async state => {
+  db.transactAsync({ test: ['field'] })(async state => {
     return new Promise(r => {
       state.test = state.test + 1
       r({})
     })
   })
-  await db.transactAsync({ test: ['field'] } as const)(async state => {
+  await db.transactAsync({ test: ['field'] })(async state => {
     return new Promise(r => {
       state.test = state.test + 2
       setTimeout(() => r({}), 100)
@@ -52,7 +52,7 @@ test('transact path argument supports nested fields', async () => {
     test3: ['field3', 'test2'],
     test4: ['field3', 'test2', 0],
     test5: ['field3', 'test2', 0, 'n'],
-  } as const)(state => {
+  })(state => {
     expect(state.test).toStrictEqual({ test: 't', test2: [{ n: 1 }, { n: 2 }] })
     expect(state.test2).toStrictEqual('t')
     expect(state.test3).toStrictEqual([{ n: 1 }, { n: 2 }])
@@ -70,7 +70,7 @@ test('transact path argument stops traversal on the first undefined or null', as
     test4: ['field3', 'test2', 2, 'n'],
     test5: ['field3', 'test2', 3],
     test6: ['field3', 'test2', 3, 'n'],
-  } as const)(state => {
+  })(state => {
     expect(state.test).toStrictEqual(1)
     expect(state.test2).toStrictEqual(undefined)
     expect(state.test3).toStrictEqual(null)
@@ -88,7 +88,7 @@ test('get path argument supports nested fields', async () => {
     test3: ['field3', 'test2'],
     test4: ['field3', 'test2', 0],
     test5: ['field3', 'test2', 0, 'n'],
-  } as const)
+  })
   expect(value.test).toStrictEqual({ test: 't', test2: [{ n: 1 }, { n: 2 }] })
   expect(value.test2).toStrictEqual('t')
   expect(value.test3).toStrictEqual([{ n: 1 }, { n: 2 }])
@@ -105,7 +105,7 @@ test('get path argument stops traversal on the first undefined or null', async (
     test4: ['field3', 'test2', 2, 'n'],
     test5: ['field3', 'test2', 3],
     test6: ['field3', 'test2', 3, 'n'],
-  } as const)
+  })
   expect(value.test).toStrictEqual(1)
   expect(value.test2).toStrictEqual(undefined)
   expect(value.test3).toStrictEqual(null)
@@ -120,7 +120,7 @@ test('transact can set array members', async () => {
     test: ['field3', 'test2', 0],
     test2: ['field3', 'test2', 1],
     test3: ['field3', 'test2', 2],
-  } as const)(state => {
+  })(state => {
     state.test = { n: 2 }
     state.test2 = { n: 3 }
     state.test3 = { n: 4 }
@@ -146,17 +146,17 @@ test('async methods return Promise', async () => {
 
 test('supports Record in schema', () => {
   const db = new JsonDB<{ field: Record<number, string> }>({ field: { 3: 'test' } })
-  const value = db.get({ test: ['field', 5] } as const).test
+  const value = db.get({ test: ['field', 5] }).test
   assertType<string>(value)
   expect(value).toBe(undefined)
-  const value2 = db.get({ test: ['field', 3] } as const).test
+  const value2 = db.get({ test: ['field', 3] }).test
   assertType<string>(value2)
   expect(value2).toBe('test')
 })
 
 test('supports non const path parts', () => {
   const db = new JsonDB<{ field: Record<number, string> }>({ field: { 3: 'test' } })
-  const value = db.get({ test: ['field', 3 as number] } as const).test
+  const value = db.get({ test: ['field', 3 as number] }).test
   assertType<string>(value)
   expect(value).toBe('test')
 })

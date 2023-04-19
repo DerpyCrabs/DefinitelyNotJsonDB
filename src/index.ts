@@ -2,7 +2,7 @@ import filePersistenceMiddleware from './middlewares/filePersistenceMiddleware'
 import superjsonMiddleware from './middlewares/superjsonMiddleware'
 import loggingMiddleware from './middlewares/loggingMiddleware'
 import { A, O, B } from 'ts-toolbelt'
-import produce, { setAutoFreeze } from 'immer'
+import { create } from 'mutative'
 import superjson from 'superjson'
 
 // transaction hooks run before and after corresponding methods and allow to change db state at this point
@@ -63,8 +63,6 @@ export class JsonDB<
     this.middlewares = (
       options?.middleware ? (Array.isArray(options.middleware) ? options.middleware : [options.middleware]) : []
     ) as JsonDBMiddleware<Schema>[]
-
-    setAutoFreeze(false) // disable freezing output of immer's `produce`
   }
 
   public exportState: IsAsyncOnly extends true ? never : () => Schema = (() => {
@@ -225,10 +223,10 @@ export class JsonDB<
     return this as any
   }
 
-  // get an object containing values from `this.currentState` followings the paths from `paths` argument
+  // get an object containing values from `this.currentState` following the paths from `paths` argument
   public get: IsAsyncOnly extends true
     ? never
-    : <Ps extends Paths>(paths: SchemaPaths<Schema, Ps>) => StateFromPaths<Schema, Ps> = ((paths: any) => {
+    : <const Ps extends Paths & SchemaPaths<Schema, Ps>>(paths: Ps) => StateFromPaths<Schema, Ps> = ((paths: any) => {
     if (this.isAsyncOnly) throw new Error('get is not available with isAsyncOnly = true')
 
     let state = cloneState(this.currentState)
@@ -244,7 +242,7 @@ export class JsonDB<
     return actionStateFromPaths(state, paths)
   }) as any
 
-  public getAsync: <Ps extends Paths>(paths: SchemaPaths<Schema, Ps>) => Promise<StateFromPaths<Schema, Ps>> = (async (
+  public getAsync: <const Ps extends Paths & SchemaPaths<Schema, Ps>>(paths: Ps) => Promise<StateFromPaths<Schema, Ps>> = (async (
     paths: any
   ) => {
     let state = cloneState(this.currentState)
@@ -264,8 +262,8 @@ export class JsonDB<
   // immer is used to allow mutation of values from state in action
   public transact: IsAsyncOnly extends true
     ? never
-    : <Ps extends Paths>(
-        paths: SchemaPaths<Schema, Ps>
+    : <const Ps extends Paths & SchemaPaths<Schema, Ps>>(
+        paths: Ps 
       ) => <Result>(
         f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Result,
         options?: { onCommit?: (r: Result) => void; onRollback?: () => void; retries?: number }
@@ -299,8 +297,8 @@ export class JsonDB<
     }
   }) as any
 
-  public transactAsync: <Ps extends Paths>(
-    paths: SchemaPaths<Schema, Ps>
+  public transactAsync: <const Ps extends Paths & SchemaPaths<Schema, Ps>>(
+    paths: Ps
   ) => <Result>(
     f: (state: O.Writable<StateFromPaths<Schema, Ps>>) => Promise<Result>,
     options?: { onCommit?: (r: Result) => Promise<void>; onRollback?: () => Promise<void>; retries?: number }
@@ -348,7 +346,7 @@ export class JsonDB<
     const actionState = actionStateFromPaths(state, paths)
 
     let result = undefined
-    const newActionState = produce(actionState, (s: any) => {
+    const newActionState = create(actionState, (s: any) => {
       result = action(s)
     })
 
@@ -391,7 +389,7 @@ export class JsonDB<
     const actionState = actionStateFromPaths(state, paths)
 
     let result = undefined
-    const newActionState = await produce(actionState, async (s: any) => {
+    const newActionState = await create(actionState, async (s: any) => {
       result = await action(s)
     })
 
